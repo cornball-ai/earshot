@@ -18,7 +18,7 @@ app_server <- function(input, output, session) {
 
   # Detect available backends (in priority order)
   available_backends <- detect_backends()
-  default_backend <- names(available_backends)[1]
+  default_backend <- unname(available_backends[1])  # Get value, not name
 
   # Update backend choices in UI
   shiny::updateSelectInput(session, "backend",
@@ -27,7 +27,7 @@ app_server <- function(input, output, session) {
 
   # Configure default backend
   configure_backend(default_backend, session)
-  status_msg(paste0("Ready. Using ", available_backends[[default_backend]], "."))
+  status_msg(paste0("Ready. Using ", names(available_backends)[1], "."))
 
   # Dynamic model selection based on backend
   output$model_select <- shiny::renderUI({
@@ -233,28 +233,29 @@ ensure_wav <- function(path, status_fn = message) {
 }
 
 # Detect available backends in priority order
+# Returns named vector: c("Display Name" = "value")
 detect_backends <- function() {
 
   backends <- c()
 
- # Check for native whisper (not yet available)
+  # Check for native whisper (not yet available)
   # if (requireNamespace("whisper", quietly = TRUE)) {
-  #   backends <- c(backends, whisper = "whisper (native)")
+  #   backends <- c(backends, "whisper (native)" = "whisper")
   # }
 
   # Check for audio.whisper
- if (requireNamespace("audio.whisper", quietly = TRUE)) {
-    backends <- c(backends, audio.whisper = "audio.whisper (local)")
+  if (requireNamespace("audio.whisper", quietly = TRUE)) {
+    backends <- c(backends, "audio.whisper (local)" = "audio.whisper")
   }
 
   # Check for OpenAI API key
   if (nzchar(Sys.getenv("OPENAI_API_KEY", ""))) {
-    backends <- c(backends, openai = "OpenAI API")
+    backends <- c(backends, "OpenAI API" = "openai")
   }
 
   # Fallback to OpenAI (user can enter key)
   if (length(backends) == 0) {
-    backends <- c(openai = "OpenAI API")
+    backends <- c("OpenAI API" = "openai")
   }
 
   backends
