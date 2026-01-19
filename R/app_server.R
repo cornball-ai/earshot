@@ -42,6 +42,30 @@ app_server <- function(input, output, session) {
     }
   })
 
+  # Save settings
+  shiny::observeEvent(input$save_settings, {
+    if (input$backend == "api") {
+      if (nzchar(input$api_base)) {
+        stt.api::set_stt_base(input$api_base)
+        msg <- paste("API URL set to:", input$api_base)
+      } else {
+        status_msg("Please enter an API URL.")
+        return()
+      }
+
+      if (nzchar(input$api_key)) {
+        stt.api::set_stt_key(input$api_key)
+        msg <- paste(msg, "(with API key)")
+      }
+
+      status_msg(msg)
+    } else {
+      # audio.whisper - clear API settings to force local backend
+      options(stt.api_base = NULL, stt.api_key = NULL)
+      status_msg("Using audio.whisper (local). Make sure it's installed.")
+    }
+  })
+
   # Transcribe button
   shiny::observeEvent(input$transcribe, {
     # Get audio file path (recorded takes priority if available)

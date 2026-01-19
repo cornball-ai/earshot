@@ -314,3 +314,61 @@ hr {
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* Settings panel */
+.settings-panel {
+  margin-top: 0.5rem;
+}
+
+.settings-panel summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+  user-select: none;
+}
+
+.settings-panel summary:hover {
+  color: var(--primary);
+}
+
+.settings-panel[open] summary {
+  color: var(--primary);
+  margin-bottom: 0.75rem;
+}
+
+.settings-content {
+  padding: 0.75rem;
+  background: var(--bg-light);
+  border-radius: 8px;
+  border: 1px solid var(--border-light);
+}
+
+.settings-content .form-group {
+  margin-bottom: 0.75rem;
+}
+
+.settings-content .form-group:last-of-type {
+  margin-bottom: 0.5rem;
+}
+
+/* Outline button */
+.btn-outline-primary {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  font-weight: 500;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-primary:hover {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+}
