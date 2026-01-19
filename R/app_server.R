@@ -140,6 +140,46 @@ app_server <- function(input, output, session) {
     if (is.null(res)) return("")
     paste(capture.output(str(res$raw)), collapse = "\n")
   })
+
+  # Audio preview
+  output$audio_preview <- shiny::renderUI({
+    # Check for recorded file first, then uploaded
+    audio_path <- recorded_file()
+    audio_type <- "audio/webm"
+
+    if (is.null(audio_path) && !is.null(input$audio_file)) {
+      audio_path <- input$audio_file$datapath
+      # Guess type from extension
+      ext <- tolower(tools::file_ext(input$audio_file$name))
+      audio_type <- switch(ext,
+        mp3 = "audio/mpeg",
+        wav = "audio/wav",
+        m4a = "audio/mp4",
+        ogg = "audio/ogg",
+        flac = "audio/flac",
+        webm = "audio/webm",
+        "audio/mpeg"
+      )
+    }
+
+    if (is.null(audio_path) || !file.exists(audio_path)) {
+      return(NULL)
+    }
+
+    # Encode as base64 data URI
+    audio_data <- base64_encode(readBin(audio_path, "raw", file.info(audio_path)$size))
+    data_uri <- paste0("data:", audio_type, ";base64,", audio_data)
+
+    shiny::div(
+      class = "audio-preview",
+      shiny::tags$label("Preview", class = "control-label"),
+      shiny::tags$audio(
+        src = data_uri,
+        controls = "controls",
+        style = "width: 100%;"
+      )
+    )
+  })
 }
 
 # Null coalesce operator
@@ -148,6 +188,11 @@ app_server <- function(input, output, session) {
 # Base64 decode (using jsonlite, a dependency of stt.api)
 base64_decode <- function(x) {
   jsonlite::base64_dec(x)
+}
+
+# Base64 encode
+base64_encode <- function(x) {
+  jsonlite::base64_enc(x)
 }
 
 # Convert audio to 16-bit wav if needed (requires ffmpeg)

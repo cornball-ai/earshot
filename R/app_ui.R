@@ -85,15 +85,17 @@ app_ui <- function() {
         shiny::fileInput("audio_file", "Upload Audio File",
                          accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm")),
 
+        # Audio preview
+        shiny::uiOutput("audio_preview"),
+
         shiny::selectInput("model", "Model",
-                           choices = c("Default" = "",
+                           choices = c("whisper-1 (OpenAI)" = "whisper-1",
                                        "tiny" = "tiny",
                                        "base" = "base",
                                        "small" = "small",
                                        "medium" = "medium",
-                                       "large" = "large",
-                                       "whisper-1" = "whisper-1"),
-                           selected = ""),
+                                       "large" = "large"),
+                           selected = "whisper-1"),
 
         shiny::selectInput("language", "Language (optional)",
                            choices = c("Auto-detect" = "",
