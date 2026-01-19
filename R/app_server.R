@@ -16,13 +16,35 @@ app_server <- function(input, output, session) {
   status_msg <- shiny::reactiveVal("Ready. Record or upload audio to transcribe.")
   recorded_file <- shiny::reactiveVal(NULL)
 
- # Auto-configure from environment on startup
-  openai_key <- Sys.getenv("OPENAI_API_KEY", "")
-  if (nzchar(openai_key)) {
-    stt.api::set_stt_base("https://api.openai.com")
-    stt.api::set_stt_key(openai_key)
-    status_msg("Ready. Using OpenAI API.")
-  }
+  # Detect available backends (in priority order)
+  available_backends <- detect_backends()
+  default_backend <- names(available_backends)[1]
+
+  # Update backend choices in UI
+  shiny::updateSelectInput(session, "backend",
+                           choices = available_backends,
+                           selected = default_backend)
+
+  # Configure default backend
+  configure_backend(default_backend, session)
+  status_msg(paste0("Ready. Using ", available_backends[[default_backend]], "."))
+
+  # Dynamic model selection based on backend
+  output$model_select <- shiny::renderUI({
+    backend <- input$backend
+    if (is.null(backend)) backend <- default_backend
+
+    models <- get_models_for_backend(backend)
+    shiny::selectInput("model", "Model",
+                       choices = models$choices,
+                       selected = models$default)
+  })
+
+  # Update backend configuration when changed
+  shiny::observeEvent(input$backend, {
+    configure_backend(input$backend, session)
+    status_msg(paste0("Backend: ", input$backend))
+  }, ignoreInit = TRUE)
 
   # Handle recorded audio from JavaScript
   shiny::observeEvent(input$recorded_audio, {
@@ -50,29 +72,15 @@ app_server <- function(input, output, session) {
     }
   })
 
-  # Save settings
-  shiny::observeEvent(input$save_settings, {
-    if (input$backend == "api") {
-      if (nzchar(input$api_base)) {
-        stt.api::set_stt_base(input$api_base)
-        msg <- paste("API URL set to:", input$api_base)
-      } else {
-        status_msg("Please enter an API URL.")
-        return()
-      }
-
+  # Apply API settings when changed
+  shiny::observeEvent(list(input$api_base, input$api_key), {
+    if (input$backend == "openai" && nzchar(input$api_base)) {
+      stt.api::set_stt_base(input$api_base)
       if (nzchar(input$api_key)) {
         stt.api::set_stt_key(input$api_key)
-        msg <- paste(msg, "(with API key)")
       }
-
-      status_msg(msg)
-    } else {
-      # audio.whisper - clear API settings to force local backend
-      options(stt.api_base = NULL, stt.api_key = NULL)
-      status_msg("Using audio.whisper (local). Make sure it's installed.")
     }
-  })
+  }, ignoreInit = TRUE)
 
   # Transcribe button
   shiny::observeEvent(input$transcribe, {
@@ -222,4 +230,77 @@ ensure_wav <- function(path, status_fn = message) {
   }
 
   wav_path
+}
+
+# Detect available backends in priority order
+detect_backends <- function() {
+
+  backends <- c()
+
+ # Check for native whisper (not yet available)
+  # if (requireNamespace("whisper", quietly = TRUE)) {
+  #   backends <- c(backends, whisper = "whisper (native)")
+  # }
+
+  # Check for audio.whisper
+ if (requireNamespace("audio.whisper", quietly = TRUE)) {
+    backends <- c(backends, audio.whisper = "audio.whisper (local)")
+  }
+
+  # Check for OpenAI API key
+  if (nzchar(Sys.getenv("OPENAI_API_KEY", ""))) {
+    backends <- c(backends, openai = "OpenAI API")
+  }
+
+  # Fallback to OpenAI (user can enter key)
+  if (length(backends) == 0) {
+    backends <- c(openai = "OpenAI API")
+  }
+
+  backends
+}
+
+# Configure backend settings
+configure_backend <- function(backend, session = NULL) {
+  if (backend == "openai") {
+    stt.api::set_stt_base("https://api.openai.com")
+    key <- Sys.getenv("OPENAI_API_KEY", "")
+    if (nzchar(key)) {
+      stt.api::set_stt_key(key)
+    }
+  } else if (backend == "audio.whisper") {
+    # Clear API settings to force local backend
+    options(stt.api_base = NULL, stt.api_key = NULL)
+  }
+}
+
+# Get models for a backend
+get_models_for_backend <- function(backend) {
+  if (backend == "openai") {
+    list(
+      choices = c("whisper-1" = "whisper-1"),
+      default = "whisper-1"
+    )
+  } else if (backend == "audio.whisper") {
+    list(
+      choices = c("tiny" = "tiny",
+                  "base" = "base",
+                  "small" = "small",
+                  "medium" = "medium",
+                  "large" = "large"),
+      default = "small"
+    )
+  } else if (backend == "whisper") {
+    # Native whisper (future)
+    list(
+      choices = c("tiny" = "tiny",
+                  "base" = "base",
+                  "small" = "small",
+                  "medium" = "medium",
+                  "large" = "large"),
+      default = "small"
+    )
+  } else {
+    list(choices = c("whisper-1" = "whisper-1"), default = "whisper-1")
+  }
 }

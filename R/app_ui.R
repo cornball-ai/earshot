@@ -44,27 +44,37 @@ app_ui <- function() {
       sidebar = bslib::sidebar(
         width = 350,
 
-        # Settings panel (collapsible)
+        # Settings panel (collapsible) - backend, model, language
         shiny::tags$details(
           class = "settings-panel",
           shiny::tags$summary("Settings"),
           shiny::div(
             class = "settings-content",
             shiny::selectInput("backend", "Backend",
-                               choices = c("API Server" = "api",
-                                           "audio.whisper (local)" = "audio.whisper"),
-                               selected = "api"),
+                               choices = c("OpenAI API" = "openai"),
+                               selected = "openai"),
+
+            shiny::uiOutput("model_select"),
+
+            shiny::selectInput("language", "Language",
+                               choices = c("English" = "en",
+                                           "Auto-detect" = "",
+                                           "Spanish" = "es",
+                                           "French" = "fr",
+                                           "German" = "de",
+                                           "Italian" = "it",
+                                           "Portuguese" = "pt",
+                                           "Japanese" = "ja",
+                                           "Chinese" = "zh"),
+                               selected = "en"),
 
             shiny::conditionalPanel(
-              condition = "input.backend == 'api'",
+              condition = "input.backend == 'openai'",
               shiny::textInput("api_base", "API URL",
-                               value = getOption("stt.api_base", "https://api.openai.com")),
+                               value = "https://api.openai.com"),
               shiny::passwordInput("api_key", "API Key",
                                    value = Sys.getenv("OPENAI_API_KEY", ""))
-            ),
-
-            shiny::actionButton("save_settings", "Save Settings",
-                                class = "btn btn-outline-primary btn-sm")
+            )
           )
         ),
 
@@ -96,30 +106,11 @@ app_ui <- function() {
         # Audio preview
         shiny::uiOutput("audio_preview"),
 
-        shiny::selectInput("model", "Model",
-                           choices = c("whisper-1 (OpenAI)" = "whisper-1",
-                                       "tiny" = "tiny",
-                                       "base" = "base",
-                                       "small" = "small",
-                                       "medium" = "medium",
-                                       "large" = "large"),
-                           selected = "whisper-1"),
-
-        shiny::selectInput("language", "Language (optional)",
-                           choices = c("Auto-detect" = "",
-                                       "English" = "en",
-                                       "Spanish" = "es",
-                                       "French" = "fr",
-                                       "German" = "de",
-                                       "Italian" = "it",
-                                       "Portuguese" = "pt",
-                                       "Japanese" = "ja",
-                                       "Chinese" = "zh"),
-                           selected = ""),
-
+        # Prompt
         shiny::textInput("prompt", "Prompt (optional)",
                          placeholder = "Names, acronyms, or terms to guide transcription"),
 
+        # Transcribe button
         shiny::actionButton("transcribe", "Transcribe", class = "btn-primary w-100"),
 
         shiny::hr(),
