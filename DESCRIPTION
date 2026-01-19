@@ -14,3 +14,5 @@ Imports:
 Suggests:
     pkgload,
     tinytest
+Remotes:
+    cornball-ai/stt.api
