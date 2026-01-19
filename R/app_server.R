@@ -17,7 +17,7 @@ app_server <- function(input, output, session) {
   recorded_file <- shiny::reactiveVal(NULL)
 
   # Handle recorded audio from JavaScript
- shiny::observeEvent(input$recorded_audio, {
+  shiny::observeEvent(input$recorded_audio, {
     audio_data <- input$recorded_audio
 
     # Decode base64 and save to temp file
@@ -55,8 +55,14 @@ app_server <- function(input, output, session) {
       return()
     }
 
-    status_msg("Transcribing...")
+    status_msg("Preparing audio...")
     result(NULL)
+
+    # Convert to 16-bit wav if needed
+    audio_path <- ensure_wav(audio_path, status_msg)
+    if (is.null(audio_path)) return()
+
+    status_msg("Transcribing...")
 
     tryCatch({
       model <- if (nzchar(input$model)) input$model else NULL
@@ -110,4 +116,33 @@ app_server <- function(input, output, session) {
 # Base64 decode (using jsonlite, a dependency of stt.api)
 base64_decode <- function(x) {
   jsonlite::base64_dec(x)
+}
+
+# Convert audio to 16-bit wav if needed (requires ffmpeg)
+ensure_wav <- function(path, status_fn = message) {
+  # Check if already a wav file with correct format
+  ext <- tolower(tools::file_ext(path))
+
+  if (ext == "wav") {
+    # Could still be wrong format, but try it first
+    return(path)
+  }
+
+  # Convert to 16-bit mono wav at 16kHz
+  wav_path <- tempfile(fileext = ".wav")
+
+  status_fn("Converting to WAV format...")
+
+  result <- system2("ffmpeg",
+    args = c("-y", "-i", shQuote(path),
+             "-ar", "16000", "-ac", "1", "-sample_fmt", "s16",
+             shQuote(wav_path)),
+    stdout = FALSE, stderr = FALSE)
+
+  if (result != 0 || !file.exists(wav_path)) {
+    status_fn("Error: Audio conversion failed. Is ffmpeg installed?")
+    return(NULL)
+  }
+
+  wav_path
 }
