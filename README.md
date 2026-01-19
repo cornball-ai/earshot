@@ -28,17 +28,57 @@ Opens at http://localhost:7802 by default.
 - Optional prompt for names, acronyms, or domain-specific terms
 - View transcription text, segments with timestamps, or raw API response
 
-## Backend Configuration
+## Backends
 
-Configure stt.api before running:
+earshot uses [stt.api](https://github.com/cornball-ai/stt.api) which supports multiple transcription backends. In auto mode, backends are tried in this order:
+
+1. **whisper** (native R torch) - Fastest, runs locally, no API key needed
+2. **api** (OpenAI or compatible) - Requires API endpoint and key
+3. **[audio.whisper](https://github.com/bnosac/audio.whisper)** - Fallback using the audio.whisper package
+
+### Native whisper (recommended)
+
+Install the whisper package for local transcription with no API dependencies:
 
 ```r
-# Local whisper server
-stt.api::set_stt_base("http://localhost:4123")
+remotes::install_github("cornball-ai/whisper")
+```
 
-# OpenAI API
+Models are downloaded automatically on first use.
+
+### OpenAI API
+
+To use OpenAI's API, set your API key in `~/.Renviron`:
+
+```
+OPENAI_API_KEY=sk-...
+```
+
+Then configure stt.api:
+
+```r
 stt.api::set_stt_base("https://api.openai.com")
 stt.api::set_stt_key(Sys.getenv("OPENAI_API_KEY"))
+```
+
+### Local whisper server
+
+For a local OpenAI-compatible server (e.g., whisper container):
+
+```r
+stt.api::set_stt_base("http://localhost:8200")
+```
+
+### audio.whisper
+
+Install from the bnosac drat repository or GitHub:
+
+```r
+# From drat
+install.packages("audio.whisper", repos = "https://bnosac.github.io/drat")
+
+# From GitHub
+remotes::install_github("bnosac/audio.whisper")
 ```
 
 ## License
