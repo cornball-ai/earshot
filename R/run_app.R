@@ -1,0 +1,21 @@
+#' Run the Earshot App
+#'
+#' Launch the Earshot speech-to-text Shiny application.
+#'
+#' @param host Host address to bind to. Defaults to "0.0.0.0" for network access.
+#' @param port Port number. Defaults to 7802.
+#' @param ... Additional arguments passed to shiny::runApp().
+#'
+#' @return Runs the Shiny app (does not return).
+#'
+#' @examples
+#' \dontrun{
+#' run_app()
+#' run_app(port = 8080)
+#' }
+#'
+#' @export
+run_app <- function(host = "0.0.0.0", port = 7802, ...) {
+  app <- shiny::shinyApp(ui = app_ui(), server = app_server)
+  shiny::runApp(app, host = host, port = port, ...)
+}
