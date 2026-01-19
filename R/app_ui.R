@@ -14,7 +14,10 @@ app_ui <- function() {
   }
   shiny::addResourcePath("www", www_path)
 
-  shiny::fluidPage(
+  bslib::page_fillable(
+    theme = bslib::bs_theme(version = 5, bootswatch = "flatly"),
+    title = "earshot",
+
     shiny::tags$head(
       shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/styles.css"),
       shiny::tags$script(src = "www/recorder.js")
@@ -27,15 +30,20 @@ app_ui <- function() {
         class = "header-content",
         shiny::tags$a(
           href = "https://cornball.ai",
+          target = "_blank",
           class = "header-link",
-          shiny::tags$img(src = "www/logo.png", class = "header-logo", alt = "Cornball AI"),
+          shiny::tags$img(src = "www/logo.png", class = "header-logo"),
           shiny::span("earshot", class = "header-title")
         )
       )
     ),
 
-    shiny::sidebarLayout(
-      shiny::sidebarPanel(
+    # Main layout with sidebar
+    bslib::layout_sidebar(
+      fillable = TRUE,
+      sidebar = bslib::sidebar(
+        width = 350,
+
         # Settings panel (collapsible)
         shiny::tags$details(
           class = "settings-panel",
@@ -112,24 +120,17 @@ app_ui <- function() {
         shiny::textInput("prompt", "Prompt (optional)",
                          placeholder = "Names, acronyms, or terms to guide transcription"),
 
-        shiny::actionButton("transcribe", "Transcribe", class = "btn-primary"),
+        shiny::actionButton("transcribe", "Transcribe", class = "btn-primary w-100"),
 
         shiny::hr(),
         shiny::verbatimTextOutput("status")
       ),
 
-      shiny::mainPanel(
-        shiny::tabsetPanel(
-          shiny::tabPanel("Text",
-                          shiny::br(),
-                          shiny::verbatimTextOutput("transcription")),
-          shiny::tabPanel("Segments",
-                          shiny::br(),
-                          shiny::tableOutput("segments")),
-          shiny::tabPanel("Raw",
-                          shiny::br(),
-                          shiny::verbatimTextOutput("raw"))
-        )
+      # Main content
+      bslib::navset_card_tab(
+        bslib::nav_panel("Text", shiny::verbatimTextOutput("transcription")),
+        bslib::nav_panel("Segments", shiny::tableOutput("segments")),
+        bslib::nav_panel("Raw", shiny::verbatimTextOutput("raw"))
       )
     )
   )

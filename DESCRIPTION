@@ -8,6 +8,7 @@ Description: A Shiny application for transcribing audio files using stt.api.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
+    bslib,
     shiny,
     stt.api
 Suggests:
