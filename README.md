@@ -4,9 +4,51 @@ Shiny app for speech-to-text transcription using [stt.api](https://github.com/co
 
 ## Installation
 
+### From R
+
 ```r
+remotes::install_github("cornball-ai/whisper")
+remotes::install_github("cornball-ai/stt.api")
 remotes::install_github("cornball-ai/earshot")
 ```
+
+### Docker
+
+Pre-built Dockerfiles are available in `docker/` for different compute targets:
+
+| Dockerfile | Use case |
+|------------|----------|
+| `Dockerfile.cpu` | CPU-only systems |
+| `Dockerfile.gpu` | NVIDIA GPUs (CUDA 11.8) |
+| `Dockerfile.gpu-blackwell` | NVIDIA Blackwell GPUs (CUDA 12.8) |
+
+**Build:**
+
+```bash
+# CPU
+docker build -f docker/Dockerfile.cpu -t earshot:cpu .
+
+# GPU (older cards)
+docker build -f docker/Dockerfile.gpu -t earshot:gpu .
+
+# GPU (Blackwell)
+docker build -f docker/Dockerfile.gpu-blackwell -t earshot:blackwell .
+```
+
+**Run:**
+
+```bash
+# CPU
+docker run -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:cpu
+
+# GPU (requires nvidia-container-toolkit)
+docker run --gpus all -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:gpu
+
+# GPU Blackwell
+docker run --gpus all -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:blackwell
+```
+
+The volume mount persists downloaded whisper models between runs.
 
 ## Usage
 

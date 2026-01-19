@@ -1,0 +1,38 @@
+FROM rocker/shiny:4.4
+
+LABEL maintainer="Troy Hernandez <troy@cornball.ai>"
+LABEL description="earshot: Speech-to-text transcription Shiny app (CPU)"
+
+# System dependencies for torch and audio processing
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libsodium-dev \
+    libfftw3-dev \
+    libsndfile1-dev \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install R packages from CRAN
+RUN install2.r --error --skipinstalled \
+    remotes \
+    shiny \
+    bslib \
+    httr2 \
+    jsonlite
+
+# Install torch (CPU)
+RUN R -e 'install.packages("torch"); torch::install_torch(type = "cpu")'
+
+# Install cornball-ai packages from GitHub
+RUN R -e 'remotes::install_github("cornball-ai/whisper")'
+RUN R -e 'remotes::install_github("cornball-ai/stt.api")'
+RUN R -e 'remotes::install_github("cornball-ai/earshot")'
+
+# Create directory for whisper models (mount as volume for persistence)
+RUN mkdir -p /root/.cache/whisper
+
+EXPOSE 7802
+
+CMD ["R", "-e", "earshot::run_app(host = '0.0.0.0')"]

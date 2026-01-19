@@ -1,0 +1,37 @@
+FROM nvidia/cuda:12.8.0-cudnn-runtime-ubuntu24.04
+
+LABEL maintainer="Troy Hernandez <troy@cornball.ai>"
+LABEL description="earshot: Speech-to-text transcription Shiny app (GPU Blackwell/CUDA 12.8)"
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install R and system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    r-base \
+    r-base-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    libxml2-dev \
+    libsodium-dev \
+    libfftw3-dev \
+    libsndfile1-dev \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install R packages from CRAN
+RUN R -e 'install.packages(c("remotes", "shiny", "bslib", "httr2", "jsonlite"))'
+
+# Install torch with CUDA 12.8 (Blackwell support)
+RUN R -e 'install.packages("torch"); torch::install_torch(type = "cu128")'
+
+# Install cornball-ai packages from GitHub
+RUN R -e 'remotes::install_github("cornball-ai/whisper")'
+RUN R -e 'remotes::install_github("cornball-ai/stt.api")'
+RUN R -e 'remotes::install_github("cornball-ai/earshot")'
+
+# Create directory for whisper models (mount as volume for persistence)
+RUN mkdir -p /root/.cache/whisper
+
+EXPOSE 7802
+
+CMD ["R", "-e", "earshot::run_app(host = '0.0.0.0')"]
