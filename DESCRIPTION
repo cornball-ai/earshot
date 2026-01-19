@@ -11,4 +11,5 @@ Imports:
     shiny,
     stt.api
 Suggests:
+    pkgload,
     tinytest

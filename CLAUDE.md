@@ -6,8 +6,9 @@ Shiny app for speech-to-text transcription using stt.api.
 
 ```
 earshot/
+├── app.R              # RStudio "Run App" entrypoint
 ├── R/
-│   ├── run_app.R      # App launcher
+│   ├── run_app.R      # Exported app launcher
 │   ├── app_ui.R       # Shiny UI
 │   └── app_server.R   # Shiny server logic
 └── inst/tinytest/     # Tests
@@ -15,12 +16,13 @@ earshot/
 
 ## Usage
 
+**RStudio**: Click "Run App" button (uses `app.R`, auto-loads package via pkgload)
+
+**From R**:
 ```r
 library(earshot)
-run_app()
+run_app()  # port 7802
 ```
-
-Default port: 7802
 
 ## Dependencies
 

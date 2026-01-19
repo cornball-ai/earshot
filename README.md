@@ -10,6 +10,9 @@ remotes::install_github("cornball-ai/earshot")
 
 ## Usage
 
+**RStudio**: Open the project and click "Run App" (uses `app.R`)
+
+**From R**:
 ```r
 library(earshot)
 run_app()
