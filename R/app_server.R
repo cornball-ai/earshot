@@ -8,6 +8,7 @@
 #'
 #' @return NULL (side effects only).
 #'
+#' @importFrom utils capture.output str
 #' @keywords internal
 app_server <- function(input, output, session) {
 

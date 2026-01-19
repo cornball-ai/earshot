@@ -5,7 +5,7 @@ Authors@R: person("Troy", "Hernandez", role = c("aut", "cre"),
                   email = "troy@cornball.ai")
 Description: A Shiny application for transcribing audio files using stt.api.
     Upload audio files and get transcriptions with timestamps.
-License: MIT + file LICENSE
+License: MIT
 Encoding: UTF-8
 Imports:
     shiny,
