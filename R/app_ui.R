@@ -6,8 +6,32 @@
 #'
 #' @keywords internal
 app_ui <- function() {
+  # Resource path for assets
+  www_path <- system.file("app/www", package = "earshot")
+  if (www_path == "") {
+    # Dev mode - use local path
+    www_path <- "inst/app/www"
+  }
+  shiny::addResourcePath("www", www_path)
+
   shiny::fluidPage(
-    shiny::titlePanel("Earshot - Speech to Text"),
+    shiny::tags$head(
+      shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/styles.css")
+    ),
+
+    # Header
+    shiny::div(
+      class = "earshot-header",
+      shiny::div(
+        class = "header-content",
+        shiny::tags$a(
+          href = "https://cornball.ai",
+          class = "header-link",
+          shiny::tags$img(src = "www/logo.png", class = "header-logo", alt = "Cornball AI"),
+          shiny::span("earshot", class = "header-title")
+        )
+      )
+    ),
 
     shiny::sidebarLayout(
       shiny::sidebarPanel(
