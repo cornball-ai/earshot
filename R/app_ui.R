@@ -36,6 +36,33 @@ app_ui <- function() {
 
     shiny::sidebarLayout(
       shiny::sidebarPanel(
+        # Settings panel (collapsible)
+        shiny::tags$details(
+          class = "settings-panel",
+          shiny::tags$summary("Settings"),
+          shiny::div(
+            class = "settings-content",
+            shiny::selectInput("backend", "Backend",
+                               choices = c("API Server" = "api",
+                                           "audio.whisper (local)" = "audio.whisper"),
+                               selected = "api"),
+
+            shiny::conditionalPanel(
+              condition = "input.backend == 'api'",
+              shiny::textInput("api_base", "API URL",
+                               value = getOption("stt.api_base", ""),
+                               placeholder = "http://localhost:4123"),
+              shiny::passwordInput("api_key", "API Key (optional)",
+                                   placeholder = "For OpenAI API")
+            ),
+
+            shiny::actionButton("save_settings", "Save Settings",
+                                class = "btn btn-outline-primary btn-sm")
+          )
+        ),
+
+        shiny::hr(),
+
         # Record from microphone
         shiny::div(
           class = "record-section",
@@ -87,33 +114,7 @@ app_ui <- function() {
         shiny::actionButton("transcribe", "Transcribe", class = "btn-primary"),
 
         shiny::hr(),
-        shiny::verbatimTextOutput("status"),
-
-        # Settings panel (collapsible)
-        shiny::hr(),
-        shiny::tags$details(
-          class = "settings-panel",
-          shiny::tags$summary("Settings"),
-          shiny::div(
-            class = "settings-content",
-            shiny::selectInput("backend", "Backend",
-                               choices = c("API Server" = "api",
-                                           "audio.whisper (local)" = "audio.whisper"),
-                               selected = "api"),
-
-            shiny::conditionalPanel(
-              condition = "input.backend == 'api'",
-              shiny::textInput("api_base", "API URL",
-                               value = getOption("stt.api_base", ""),
-                               placeholder = "http://localhost:4123"),
-              shiny::passwordInput("api_key", "API Key (optional)",
-                                   placeholder = "For OpenAI API")
-            ),
-
-            shiny::actionButton("save_settings", "Save Settings",
-                                class = "btn btn-outline-primary btn-sm")
-          )
-        )
+        shiny::verbatimTextOutput("status")
       ),
 
       shiny::mainPanel(
