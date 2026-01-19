@@ -23,6 +23,20 @@
   }
 
   async function startRecording() {
+    // Check for secure context (HTTPS or localhost)
+    if (!window.isSecureContext) {
+      Shiny.setInputValue('recording_error',
+        'Microphone requires HTTPS. Access via localhost or enable HTTPS.');
+      return;
+    }
+
+    // Check for mediaDevices API
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      Shiny.setInputValue('recording_error',
+        'Microphone not supported in this browser. Try Chrome or Firefox.');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
