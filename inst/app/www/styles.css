@@ -20,20 +20,21 @@
 /* Header */
 .earshot-header {
   background: #000;
-  padding: 0.75rem 1.5rem;
+  padding: 1rem 1.5rem;
   margin: -15px -15px 1.5rem -15px;
+  overflow: visible;
 }
 
 .header-content {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 .header-link {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
   text-decoration: none;
 }
 
@@ -42,13 +43,14 @@
 }
 
 .header-logo {
-  height: 32px;
+  height: 40px;
   width: auto;
+  display: block;
 }
 
 .header-title {
   font-family: 'Inter', sans-serif;
-  font-size: 1.25rem;
+  font-size: 1.5rem;
   font-weight: 800;
   color: white;
   letter-spacing: -0.02em;
