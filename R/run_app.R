@@ -15,7 +15,12 @@
 #' }
 #'
 #' @export
-run_app <- function(host = "0.0.0.0", port = 7802, ...) {
+run_app <- function(
+  host = "0.0.0.0",
+  port = 7802,
+  ...
+) {
   app <- shiny::shinyApp(ui = app_ui(), server = app_server)
   shiny::runApp(app, host = host, port = port, ...)
 }
+

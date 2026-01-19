@@ -51,29 +51,29 @@ app_ui <- function() {
           shiny::div(
             class = "settings-content",
             shiny::selectInput("backend", "Backend",
-                               choices = c("OpenAI API" = "openai"),
-                               selected = "openai"),
+              choices = c("OpenAI API" = "openai"),
+              selected = "openai"),
 
             shiny::uiOutput("model_select"),
 
             shiny::selectInput("language", "Language",
-                               choices = c("English" = "en",
-                                           "Auto-detect" = "",
-                                           "Spanish" = "es",
-                                           "French" = "fr",
-                                           "German" = "de",
-                                           "Italian" = "it",
-                                           "Portuguese" = "pt",
-                                           "Japanese" = "ja",
-                                           "Chinese" = "zh"),
-                               selected = "en"),
+              choices = c("English" = "en",
+                "Auto-detect" = "",
+                "Spanish" = "es",
+                "French" = "fr",
+                "German" = "de",
+                "Italian" = "it",
+                "Portuguese" = "pt",
+                "Japanese" = "ja",
+                "Chinese" = "zh"),
+              selected = "en"),
 
             shiny::conditionalPanel(
               condition = "input.backend == 'openai'",
               shiny::textInput("api_base", "API URL",
-                               value = "https://api.openai.com"),
+                value = "https://api.openai.com"),
               shiny::passwordInput("api_key", "API Key",
-                                   value = Sys.getenv("OPENAI_API_KEY", ""))
+                value = Sys.getenv("OPENAI_API_KEY", ""))
             )
           )
         ),
@@ -101,14 +101,14 @@ app_ui <- function() {
 
         # Upload file
         shiny::fileInput("audio_file", "Upload Audio File",
-                         accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm")),
+          accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm")),
 
         # Audio preview
         shiny::uiOutput("audio_preview"),
 
         # Prompt
         shiny::textInput("prompt", "Prompt (optional)",
-                         placeholder = "Names, acronyms, or terms to guide transcription"),
+          placeholder = "Names, acronyms, or terms to guide transcription"),
 
         # Transcribe button
         shiny::actionButton("transcribe", "Transcribe", class = "btn-primary w-100"),
@@ -126,3 +126,4 @@ app_ui <- function() {
     )
   )
 }
+

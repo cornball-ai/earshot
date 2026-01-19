@@ -1,10 +1,9 @@
-.Rproj.user
-.Rhistory
+*.bin
 .RData
-.Ruserdata
+.Rhistory
 *.Rproj
+.Rproj.user
+.Ruserdata
+src/*.dll
 src/*.o
 src/*.so
-src/*.dll
-ggml-tiny.bin
-*.bin
