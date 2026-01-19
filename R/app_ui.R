@@ -50,10 +50,9 @@ app_ui <- function() {
             shiny::conditionalPanel(
               condition = "input.backend == 'api'",
               shiny::textInput("api_base", "API URL",
-                               value = getOption("stt.api_base", ""),
-                               placeholder = "http://localhost:4123"),
-              shiny::passwordInput("api_key", "API Key (optional)",
-                                   placeholder = "For OpenAI API")
+                               value = getOption("stt.api_base", "https://api.openai.com")),
+              shiny::passwordInput("api_key", "API Key",
+                                   value = Sys.getenv("OPENAI_API_KEY", ""))
             ),
 
             shiny::actionButton("save_settings", "Save Settings",

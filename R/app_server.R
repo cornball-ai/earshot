@@ -16,6 +16,14 @@ app_server <- function(input, output, session) {
   status_msg <- shiny::reactiveVal("Ready. Record or upload audio to transcribe.")
   recorded_file <- shiny::reactiveVal(NULL)
 
+ # Auto-configure from environment on startup
+  openai_key <- Sys.getenv("OPENAI_API_KEY", "")
+  if (nzchar(openai_key)) {
+    stt.api::set_stt_base("https://api.openai.com")
+    stt.api::set_stt_key(openai_key)
+    status_msg("Ready. Using OpenAI API.")
+  }
+
   # Handle recorded audio from JavaScript
   shiny::observeEvent(input$recorded_audio, {
     audio_data <- input$recorded_audio
