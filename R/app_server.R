@@ -13,10 +13,47 @@
 app_server <- function(input, output, session) {
 
   result <- shiny::reactiveVal(NULL)
-  status_msg <- shiny::reactiveVal("Ready. Upload an audio file to transcribe.")
+  status_msg <- shiny::reactiveVal("Ready. Record or upload audio to transcribe.")
+  recorded_file <- shiny::reactiveVal(NULL)
 
+  # Handle recorded audio from JavaScript
+ shiny::observeEvent(input$recorded_audio, {
+    audio_data <- input$recorded_audio
+
+    # Decode base64 and save to temp file
+    raw_audio <- base64_decode(audio_data$data)
+    tmp_file <- tempfile(fileext = ".webm")
+    writeBin(raw_audio, tmp_file)
+
+    recorded_file(tmp_file)
+    status_msg("Recording saved. Click Transcribe to process.")
+  })
+
+  # Handle recording errors
+  shiny::observeEvent(input$recording_error, {
+    status_msg(paste("Microphone error:", input$recording_error))
+  })
+
+  # Update status during recording
+  shiny::observeEvent(input$recording_status, {
+    if (input$recording_status == "recording") {
+      status_msg("Recording... Click Stop when done.")
+      recorded_file(NULL)
+    }
+  })
+
+  # Transcribe button
   shiny::observeEvent(input$transcribe, {
-    shiny::req(input$audio_file)
+    # Get audio file path (recorded takes priority if available)
+    audio_path <- recorded_file()
+    if (is.null(audio_path) && !is.null(input$audio_file)) {
+      audio_path <- input$audio_file$datapath
+    }
+
+    if (is.null(audio_path)) {
+      status_msg("No audio to transcribe. Record or upload a file first.")
+      return()
+    }
 
     status_msg("Transcribing...")
     result(NULL)
@@ -27,7 +64,7 @@ app_server <- function(input, output, session) {
       prompt <- if (nzchar(input$prompt)) input$prompt else NULL
 
       res <- stt.api::transcribe(
-        file = input$audio_file$datapath,
+        file = audio_path,
         model = model,
         language = language,
         prompt = prompt,
@@ -35,6 +72,7 @@ app_server <- function(input, output, session) {
       )
 
       result(res)
+      recorded_file(NULL)  # Clear after successful transcription
       status_msg(sprintf("Done. Backend: %s, Language: %s",
                          res$backend, res$language %||% "auto"))
 
@@ -68,3 +106,8 @@ app_server <- function(input, output, session) {
 
 # Null coalesce operator
 `%||%` <- function(x, y) if (is.null(x)) y else x
+
+# Base64 decode (using jsonlite, a dependency of stt.api)
+base64_decode <- function(x) {
+  jsonlite::base64_dec(x)
+}

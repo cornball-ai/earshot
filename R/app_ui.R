@@ -16,7 +16,8 @@ app_ui <- function() {
 
   shiny::fluidPage(
     shiny::tags$head(
-      shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/styles.css")
+      shiny::tags$link(rel = "stylesheet", type = "text/css", href = "www/styles.css"),
+      shiny::tags$script(src = "www/recorder.js")
     ),
 
     # Header
@@ -35,6 +36,26 @@ app_ui <- function() {
 
     shiny::sidebarLayout(
       shiny::sidebarPanel(
+        # Record from microphone
+        shiny::div(
+          class = "record-section",
+          shiny::tags$label("Record from Microphone", class = "control-label"),
+          shiny::div(
+            class = "record-controls",
+            shiny::tags$button(
+              id = "record_btn",
+              class = "btn btn-record",
+              "Record"
+            ),
+            shiny::span(id = "record_timer", class = "record-timer")
+          )
+        ),
+
+        shiny::tags$div(class = "input-divider",
+          shiny::span("or", class = "divider-text")
+        ),
+
+        # Upload file
         shiny::fileInput("audio_file", "Upload Audio File",
                          accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm")),
 
