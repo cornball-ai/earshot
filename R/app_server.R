@@ -260,10 +260,10 @@ detect_backends <- function() {
 
   backends <- c()
 
-  # Check for native whisper (not yet available)
-  # if (requireNamespace("whisper", quietly = TRUE)) {
-  #   backends <- c(backends, "whisper (native)" = "whisper")
-  # }
+  # Check for native whisper
+  if (requireNamespace("whisper", quietly = TRUE)) {
+    backends <- c(backends, "whisper (native)" = "whisper")
+  }
 
   # Check for audio.whisper
   if (requireNamespace("audio.whisper", quietly = TRUE)) {
@@ -296,6 +296,9 @@ configure_backend <- function(
     }
   } else if (backend == "audio.whisper") {
     # Clear API settings to force local backend
+    options(stt.api_base = NULL, stt.api_key = NULL)
+  } else if (backend == "whisper") {
+    # Native whisper - no API settings needed
     options(stt.api_base = NULL, stt.api_key = NULL)
   }
 }

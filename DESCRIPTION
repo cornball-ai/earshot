@@ -16,4 +16,3 @@ Suggests:
     tinytest
 Remotes:
     cornball-ai/stt.api
-RoxygenNote: 7.3.3
