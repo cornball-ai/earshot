@@ -191,7 +191,7 @@ app_server <- function(
       }
 
       # Encode as base64 data URI
-      audio_data <- base64_encode(readBin(audio_path, "raw", file.info(audio_path) $size))
+      audio_data <- base64_encode(readBin(audio_path, "raw", file.info(audio_path)$size))
       data_uri <- paste0("data:", audio_type, ";base64,", audio_data)
 
       shiny::div(
