@@ -19,6 +19,7 @@ app_server <- function(
   result <- shiny::reactiveVal(NULL)
   status_msg <- shiny::reactiveVal("Ready. Record or upload audio to transcribe.")
   recorded_file <- shiny::reactiveVal(NULL)
+  model_refresh <- shiny::reactiveVal(0) # Triggers model list refresh
 
   # Detect available backends (in priority order)
   available_backends <- detect_backends()
@@ -33,8 +34,9 @@ app_server <- function(
   configure_backend(default_backend, session)
   status_msg(paste0("Ready. Using ", names(available_backends)[1], "."))
 
-  # Dynamic model selection based on backend
+  # Dynamic model selection based on backend (refreshes after download)
   output$model_select <- shiny::renderUI({
+      model_refresh() # Dependency to refresh after downloads
       backend <- input$backend
       if (is.null(backend)) backend <- default_backend
 
@@ -44,11 +46,108 @@ app_server <- function(
         selected = models$default)
     })
 
+  # Dynamic download model dropdown (only shows models NOT yet downloaded)
+  output$download_model_ui <- shiny::renderUI({
+      model_refresh() # Dependency to refresh after downloads
+
+      all_models <- c("tiny", "base", "small", "medium", "large-v3")
+      if (requireNamespace("whisper", quietly = TRUE)) {
+        downloaded <- whisper::list_downloaded_models()
+        available <- setdiff(all_models, downloaded)
+      } else {
+        available <- all_models
+      }
+
+      if (length(available) == 0) {
+        shiny::div(
+          class = "download-model-section text-muted",
+          "All models downloaded"
+        )
+      } else {
+        shiny::div(
+          class = "download-model-section",
+          shiny::selectInput("download_model", "Download Model",
+            choices = available, selected = available[1]),
+          shiny::actionButton("download_btn", "Download Weights",
+            class = "btn-secondary btn-sm w-100")
+        )
+      }
+    })
+
   # Update backend configuration when changed
   shiny::observeEvent(input$backend, {
       configure_backend(input$backend, session)
       status_msg(paste0("Backend: ", input$backend))
     }, ignoreInit = TRUE)
+
+  # Model sizes in MB (approximate)
+  model_sizes <- c(
+    tiny = 151, base = 290, small = 967,
+    medium = 3055, `large-v3` = 6174
+  )
+
+  # Handle whisper model download - show confirmation modal
+
+  shiny::observeEvent(input$download_btn, {
+      model <- input$download_model
+      if (is.null(model) || model == "") return()
+
+      if (!requireNamespace("whisper", quietly = TRUE)) {
+        status_msg("whisper package not installed.")
+        return()
+      }
+
+      # Check if already downloaded
+      if (whisper::model_exists(model)) {
+        status_msg(paste0("Model '", model, "' is already downloaded."))
+        return()
+      }
+
+      # Get size for display
+      size_mb <- model_sizes[[model]]
+      if (!is.null(size_mb)) {
+        if (size_mb >= 1000) {
+          size_str <- sprintf("%.1f GB", size_mb / 1000)
+        } else {
+          size_str <- paste0(size_mb, " MB")
+        }
+      } else {
+        size_str <- "unknown size"
+      }
+
+      # Show confirmation modal
+      shiny::showModal(shiny::modalDialog(
+          title = "Download Model?",
+          paste0("Download '", model, "' model (", size_str, ") from HuggingFace?"),
+          footer = shiny::tagList(
+            shiny::modalButton("Cancel"),
+            shiny::actionButton("confirm_download", "Download", class = "btn-primary")
+          )
+        ))
+    })
+
+  # Handle confirmed download
+  shiny::observeEvent(input$confirm_download, {
+      shiny::removeModal()
+      model <- input$download_model
+
+      status_msg(paste0("Downloading '", model, "'... This may take a while."))
+
+      # Download with consent option (modal = consent)
+      tryCatch({
+          old_opt <- getOption("whisper.consent")
+          options(whisper.consent = TRUE)
+          on.exit(options(whisper.consent = old_opt), add = TRUE)
+
+          whisper::download_whisper_model(model)
+          status_msg(paste0("Model '", model, "' downloaded successfully!"))
+
+          # Trigger model list refresh
+          model_refresh(model_refresh() + 1)
+        }, error = function(e) {
+          status_msg(paste0("Download failed: ", conditionMessage(e)))
+        })
+    })
 
   # Handle recorded audio from JavaScript
   shiny::observeEvent(input$recorded_audio, {
@@ -113,6 +212,18 @@ app_server <- function(
             model <- input$model
           } else {
             model <- NULL
+          }
+
+          # Check if native whisper model is downloaded
+          if (input$backend == "whisper" && !is.null(model)) {
+            if (requireNamespace("whisper", quietly = TRUE) &&
+              !whisper::model_exists(model)) {
+              status_msg(paste0(
+                  "Model '", model, "' not downloaded. ",
+                  "Use the Download Weights button above."
+                ))
+              return()
+            }
           }
           if (nzchar(input$language)) {
             language <- input$language
@@ -320,15 +431,31 @@ get_models_for_backend <- function(backend) {
       default = "small"
     )
   } else if (backend == "whisper") {
-    # Native whisper (future)
-    list(
-      choices = c("tiny" = "tiny",
-        "base" = "base",
-        "small" = "small",
-        "medium" = "medium",
-        "large" = "large"),
-      default = "small"
-    )
+    # Native whisper - only show downloaded models
+    if (requireNamespace("whisper", quietly = TRUE)) {
+      downloaded <- whisper::list_downloaded_models()
+      if (length(downloaded) == 0) {
+        # No models downloaded - show all with tiny as default
+        list(
+          choices = c("tiny" = "tiny",
+            "base" = "base",
+            "small" = "small",
+            "medium" = "medium",
+            "large-v3" = "large-v3"),
+          default = "tiny"
+        )
+      } else {
+        # Only show downloaded models
+        choices <- stats::setNames(downloaded, downloaded)
+        list(choices = choices, default = downloaded[1])
+      }
+    } else {
+      # whisper not installed
+      list(
+        choices = c("tiny" = "tiny"),
+        default = "tiny"
+      )
+    }
   } else {
     list(choices = c("whisper-1" = "whisper-1"), default = "whisper-1")
   }

@@ -56,6 +56,12 @@ app_ui <- function() {
 
             shiny::uiOutput("model_select"),
 
+            # Download model button (whisper backend only)
+            shiny::conditionalPanel(
+              condition = "input.backend == 'whisper'",
+              shiny::uiOutput("download_model_ui")
+            ),
+
             shiny::selectInput("language", "Language",
               choices = c("English" = "en",
                 "Auto-detect" = "",

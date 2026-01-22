@@ -12,7 +12,11 @@ Imports:
     shiny,
     stt.api
 Suggests:
+    audio.whisper,
+    jsonlite,
     pkgload,
-    tinytest
+    tinytest,
+    whisper
 Remotes:
-    cornball-ai/stt.api
+    cornball-ai/stt.api,
+    cornball-ai/whisper
