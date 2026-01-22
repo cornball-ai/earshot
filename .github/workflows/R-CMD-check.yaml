@@ -8,6 +8,7 @@ on:
 
 env:
   _R_CHECK_FORCE_SUGGESTS_: "false"
+  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   R-CMD-check:
@@ -27,9 +28,7 @@ jobs:
         uses: eddelbuettel/github-actions/r-ci@master
 
       - name: Dependencies
-        run: |
-          ./run.sh install_all
-          Rscript -e 'remotes::install_github("cornball-ai/stt.api")'
+        run: ./run.sh install_all
 
       - name: Test
         run: ./run.sh run_tests
