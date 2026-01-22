@@ -9,6 +9,7 @@ on:
 env:
   _R_CHECK_FORCE_SUGGESTS_: "false"
   GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   R-CMD-check:
@@ -26,6 +27,12 @@ jobs:
 
       - name: Setup
         uses: eddelbuettel/github-actions/r-ci@master
+
+      - name: Configure GitHub PAT
+        run: |
+          mkdir -p ~/.R
+          echo 'options(download.file.method = "libcurl")' >> ~/.Rprofile
+          Rscript -e 'cat("GITHUB_PAT configured:", nchar(Sys.getenv("GITHUB_PAT")) > 0, "\n")'
 
       - name: Dependencies
         run: ./run.sh install_all

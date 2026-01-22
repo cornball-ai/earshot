@@ -4,51 +4,11 @@ Shiny app for speech-to-text transcription using [stt.api](https://github.com/co
 
 ## Installation
 
-### From R
-
 ```r
 remotes::install_github("cornball-ai/whisper")
 remotes::install_github("cornball-ai/stt.api")
 remotes::install_github("cornball-ai/earshot")
 ```
-
-### Docker
-
-Pre-built Dockerfiles are available in `docker/` for different compute targets:
-
-| Dockerfile | Use case |
-|------------|----------|
-| `Dockerfile.cpu` | CPU-only systems |
-| `Dockerfile.gpu` | NVIDIA GPUs (CUDA 11.8) |
-| `Dockerfile.gpu-blackwell` | NVIDIA Blackwell GPUs (CUDA 12.8) |
-
-**Build:**
-
-```bash
-# CPU
-docker build -f docker/Dockerfile.cpu -t earshot:cpu .
-
-# GPU (older cards)
-docker build -f docker/Dockerfile.gpu -t earshot:gpu .
-
-# GPU (Blackwell)
-docker build -f docker/Dockerfile.gpu-blackwell -t earshot:blackwell .
-```
-
-**Run:**
-
-```bash
-# CPU
-docker run -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:cpu
-
-# GPU (requires nvidia-container-toolkit)
-docker run --gpus all -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:gpu
-
-# GPU Blackwell
-docker run --gpus all -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:blackwell
-```
-
-The volume mount persists downloaded whisper models between runs.
 
 ## Usage
 
@@ -64,11 +24,20 @@ Opens at http://localhost:7802 by default.
 
 ## Features
 
+- Record from microphone (requires browser - see note below)
 - Upload audio files (.wav, .mp3, .m4a, .ogg, .flac, .webm)
 - Model selection (tiny, base, small, medium, large, or whisper-1 for OpenAI)
 - Optional language hint for improved accuracy
 - Optional prompt for names, acronyms, or domain-specific terms
 - View transcription text, segments with timestamps, or raw API response
+
+### Microphone Recording
+
+To use microphone recording, you must open the app in a web browser (not RStudio's viewer pane). Click "Open in Browser" in the Shiny viewer tab, or navigate directly to the URL (e.g., http://localhost:7802).
+
+Microphone access requires:
+- A secure context (HTTPS or localhost)
+- Browser permission to access the microphone
 
 ## Backends
 

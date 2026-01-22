@@ -46,6 +46,25 @@ app_server <- function(
         selected = models$default)
     })
 
+  # Config display at top of sidebar
+  output$config_display <- shiny::renderUI({
+      backend <- input$backend
+      model <- input$model
+      language <- input$language
+
+      if (is.null(backend)) backend <- default_backend
+      if (is.null(model)) model <- "..."
+      if (is.null(language) || language == "") language <- "auto"
+
+      shiny::tags$pre(
+        id = "config_box",
+        style = "font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #94a3b8; padding: 0.5rem; background: #f8fafc; border-radius: 6px; border: none;",
+        paste0("Backend: ", backend, "\n",
+               "Model: ", model, "\n",
+               "Language: ", language)
+      )
+    })
+
   # Dynamic download model dropdown (only shows models NOT yet downloaded)
   output$download_model_ui <- shiny::renderUI({
       model_refresh() # Dependency to refresh after downloads
@@ -205,53 +224,60 @@ app_server <- function(
       audio_path <- ensure_wav(audio_path, status_msg)
       if (is.null(audio_path)) return()
 
-      status_msg("Transcribing...")
+      shiny::withProgress(message = "Transcribing...", value = 0, {
 
-      tryCatch({
-          if (nzchar(input$model)) {
-            model <- input$model
-          } else {
-            model <- NULL
-          }
+        shiny::incProgress(0.1, detail = "Preparing")
 
-          # Check if native whisper model is downloaded
-          if (input$backend == "whisper" && !is.null(model)) {
-            if (requireNamespace("whisper", quietly = TRUE) &&
-              !whisper::model_exists(model)) {
-              status_msg(paste0(
-                  "Model '", model, "' not downloaded. ",
-                  "Use the Download Weights button above."
-                ))
-              return()
-            }
-          }
-          if (nzchar(input$language)) {
-            language <- input$language
-          } else {
-            language <- NULL
-          }
-          if (nzchar(input$prompt)) {
-            prompt <- input$prompt
-          } else {
-            prompt <- NULL
-          }
+        if (nzchar(input$model)) {
+          model <- input$model
+        } else {
+          model <- NULL
+        }
 
-          res <- stt.api::transcribe(
-            file = audio_path,
-            model = model,
-            language = language,
-            prompt = prompt,
-            response_format = "verbose_json"
-          )
+        # Check if native whisper model is downloaded
+        if (input$backend == "whisper" && !is.null(model)) {
+          if (requireNamespace("whisper", quietly = TRUE) &&
+            !whisper::model_exists(model)) {
+            status_msg(paste0(
+                "Model '", model, "' not downloaded. ",
+                "Use the Download Weights button above."
+              ))
+            return()
+          }
+        }
+        if (nzchar(input$language)) {
+          language <- input$language
+        } else {
+          language <- NULL
+        }
+        if (nzchar(input$prompt)) {
+          prompt <- input$prompt
+        } else {
+          prompt <- NULL
+        }
 
-          result(res)
-          recorded_file(NULL) # Clear after successful transcription
-          status_msg(sprintf("Done. Backend: %s, Language: %s",
+        shiny::incProgress(0.2, detail = "Running transcription")
+
+        tryCatch({
+            res <- stt.api::transcribe(
+              file = audio_path,
+              model = model,
+              language = language,
+              prompt = prompt,
+              response_format = "verbose_json"
+            )
+
+            shiny::incProgress(0.7, detail = "Done")
+
+            result(res)
+            recorded_file(NULL) # Clear after successful transcription
+            status_msg(sprintf("Done. Backend: %s, Language: %s",
               res$backend, res$language %||% "auto"))
 
         }, error = function(e) {
           status_msg(paste("Error:", conditionMessage(e)))
         })
+      }) # end withProgress
     })
 
   output$status <- shiny::renderText({
@@ -266,7 +292,10 @@ app_server <- function(
 
   output$segments <- shiny::renderTable({
       res <- result()
-      if (is.null(res) || is.null(res$segments)) return(NULL)
+      if (is.null(res)) return(NULL)
+      if (is.null(res$segments) || nrow(res$segments) == 0) {
+        return(data.frame(Note = "Segments not available for this backend"))
+      }
       res$segments
     })
 

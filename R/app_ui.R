@@ -44,7 +44,40 @@ app_ui <- function() {
       sidebar = bslib::sidebar(
         width = 350,
 
-        # Settings panel (collapsible) - backend, model, language
+        # Record from microphone
+        shiny::div(
+          class = "record-section",
+          shiny::tags$label("Record from Microphone", class = "control-label"),
+          shiny::div(
+            class = "record-controls",
+            shiny::tags$button(
+              id = "record_btn",
+              class = "btn btn-record",
+              "Record"
+            ),
+            shiny::span(id = "record_timer", class = "record-timer"),
+            shiny::span("or", class = "divider-text")
+          )
+        ),
+
+        # Upload file
+        shiny::fileInput("audio_file", "Upload Audio File",
+          accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm")),
+
+        # Audio preview
+        shiny::uiOutput("audio_preview"),
+
+        # Prompt
+        shiny::textInput("prompt", "Prompt (optional)",
+          placeholder = "Names, acronyms, or terms to guide transcription"),
+
+        # Transcribe button
+        shiny::actionButton("transcribe", "Transcribe", class = "btn-primary w-100"),
+
+        # Config/status display
+        shiny::uiOutput("config_display"),
+
+        # Settings panel (collapsible) - at bottom
         shiny::tags$details(
           class = "settings-panel",
           shiny::tags$summary("Settings"),
@@ -82,45 +115,7 @@ app_ui <- function() {
                 value = Sys.getenv("OPENAI_API_KEY", ""))
             )
           )
-        ),
-
-        shiny::hr(),
-
-        # Record from microphone
-        shiny::div(
-          class = "record-section",
-          shiny::tags$label("Record from Microphone", class = "control-label"),
-          shiny::div(
-            class = "record-controls",
-            shiny::tags$button(
-              id = "record_btn",
-              class = "btn btn-record",
-              "Record"
-            ),
-            shiny::span(id = "record_timer", class = "record-timer")
-          )
-        ),
-
-        shiny::tags$div(class = "input-divider",
-          shiny::span("or", class = "divider-text")
-        ),
-
-        # Upload file
-        shiny::fileInput("audio_file", "Upload Audio File",
-          accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac", ".webm")),
-
-        # Audio preview
-        shiny::uiOutput("audio_preview"),
-
-        # Prompt
-        shiny::textInput("prompt", "Prompt (optional)",
-          placeholder = "Names, acronyms, or terms to guide transcription"),
-
-        # Transcribe button
-        shiny::actionButton("transcribe", "Transcribe", class = "btn-primary w-100"),
-
-        shiny::hr(),
-        shiny::verbatimTextOutput("status")
+        )
       ),
 
       # Main content
