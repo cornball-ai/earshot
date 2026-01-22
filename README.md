@@ -12,44 +12,6 @@ remotes::install_github("cornball-ai/stt.api")
 remotes::install_github("cornball-ai/earshot")
 ```
 
-### Docker
-
-Pre-built Dockerfiles are available in `docker/` for different compute targets:
-
-| Dockerfile | Use case |
-|------------|----------|
-| `Dockerfile.cpu` | CPU-only systems |
-| `Dockerfile.gpu` | NVIDIA GPUs (CUDA 11.8) |
-| `Dockerfile.gpu-blackwell` | NVIDIA Blackwell GPUs (CUDA 12.8) |
-
-**Build:**
-
-```bash
-# CPU
-docker build -f docker/Dockerfile.cpu -t earshot:cpu .
-
-# GPU (older cards)
-docker build -f docker/Dockerfile.gpu -t earshot:gpu .
-
-# GPU (Blackwell)
-docker build -f docker/Dockerfile.gpu-blackwell -t earshot:blackwell .
-```
-
-**Run:**
-
-```bash
-# CPU
-docker run -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:cpu
-
-# GPU (requires nvidia-container-toolkit)
-docker run --gpus all -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:gpu
-
-# GPU Blackwell
-docker run --gpus all -p 7802:7802 -v whisper-models:/root/.cache/whisper earshot:blackwell
-```
-
-The volume mount persists downloaded whisper models between runs.
-
 ## Usage
 
 **RStudio**: Open the project and click "Run App" (uses `app.R`)
@@ -86,7 +48,7 @@ Install the whisper package for local transcription with no API dependencies:
 remotes::install_github("cornball-ai/whisper")
 ```
 
-Models are downloaded automatically on first use.
+Models are downloaded on first use.
 
 ### OpenAI API
 

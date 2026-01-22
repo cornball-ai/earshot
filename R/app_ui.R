@@ -44,42 +44,46 @@ app_ui <- function() {
       sidebar = bslib::sidebar(
         width = 350,
 
-        # Settings panel (collapsible) - backend, model, language
-        shiny::tags$details(
-          class = "settings-panel",
-          shiny::tags$summary("Settings"),
-          shiny::div(
-            class = "settings-content",
-            shiny::selectInput("backend", "Backend",
-              choices = c("OpenAI API" = "openai"),
-              selected = "openai"),
+        # Backend selection with model/language
+        shiny::div(
+          class = "backend-section",
+          shiny::selectInput("backend", "Backend",
+            choices = c("OpenAI API" = "openai"),
+            selected = "openai"),
 
-            shiny::uiOutput("model_select"),
+          shiny::uiOutput("model_select"),
 
-            # Download model button (whisper backend only)
-            shiny::conditionalPanel(
-              condition = "input.backend == 'whisper'",
-              shiny::uiOutput("download_model_ui")
-            ),
+          shiny::selectInput("language", "Language",
+            choices = c("English" = "en",
+              "Auto-detect" = "",
+              "Spanish" = "es",
+              "French" = "fr",
+              "German" = "de",
+              "Italian" = "it",
+              "Portuguese" = "pt",
+              "Japanese" = "ja",
+              "Chinese" = "zh"),
+            selected = "en"),
 
-            shiny::selectInput("language", "Language",
-              choices = c("English" = "en",
-                "Auto-detect" = "",
-                "Spanish" = "es",
-                "French" = "fr",
-                "German" = "de",
-                "Italian" = "it",
-                "Portuguese" = "pt",
-                "Japanese" = "ja",
-                "Chinese" = "zh"),
-              selected = "en"),
+          # Download model button (whisper backend only)
+          shiny::conditionalPanel(
+            condition = "input.backend == 'whisper'",
+            shiny::uiOutput("download_model_ui")
+          ),
 
-            shiny::conditionalPanel(
-              condition = "input.backend == 'openai'",
-              shiny::textInput("api_base", "API URL",
-                value = "https://api.openai.com"),
-              shiny::passwordInput("api_key", "API Key",
-                value = Sys.getenv("OPENAI_API_KEY", ""))
+          # OpenAI API settings (collapsible)
+          shiny::conditionalPanel(
+            condition = "input.backend == 'openai'",
+            shiny::tags$details(
+              class = "api-settings",
+              shiny::tags$summary("API Settings"),
+              shiny::div(
+                class = "api-settings-content",
+                shiny::textInput("api_base", "API URL",
+                  value = "https://api.openai.com"),
+                shiny::passwordInput("api_key", "API Key",
+                  value = Sys.getenv("OPENAI_API_KEY", ""))
+              )
             )
           )
         ),
