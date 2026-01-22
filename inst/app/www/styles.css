@@ -390,3 +390,43 @@ hr {
   padding: 0.25rem 0.75rem;
   font-size: 0.8rem;
 }
+
+/* Stream mode toggle */
+.stream-toggle {
+  margin-top: 0.5rem;
+}
+
+.stream-toggle .form-check {
+  margin-bottom: 0;
+}
+
+.stream-toggle .form-check-label {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+/* Live transcription display */
+.live-transcription-container {
+  margin-bottom: 1rem;
+}
+
+.live-transcription {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+  padding: 1rem;
+  background: var(--bg-light);
+  border-left: 3px solid var(--primary);
+  border-radius: 0 8px 8px 0;
+  min-height: 80px;
+  max-height: 200px;
+  overflow-y: auto;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.live-transcription:empty::before,
+.live-transcription #live_text:empty::before {
+  content: "Waiting for audio...";
+  color: var(--text-muted);
+  font-style: italic;
+}

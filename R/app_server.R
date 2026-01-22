@@ -21,6 +21,10 @@ app_server <- function(
   recorded_file <- shiny::reactiveVal(NULL)
   model_refresh <- shiny::reactiveVal(0) # Triggers model list refresh
 
+  # Streaming transcription state
+  streaming_chunks <- shiny::reactiveVal(list())  # Accumulates chunk results
+  streaming_text <- shiny::reactiveVal("")        # Combined live text
+
   # Detect available backends (in priority order)
   available_backends <- detect_backends()
   default_backend <- unname(available_backends[1]) # Get value, not name
@@ -189,9 +193,86 @@ app_server <- function(
   # Update status during recording
   shiny::observeEvent(input$recording_status, {
       if (input$recording_status == "recording") {
-        status_msg("Recording... Click Stop when done.")
+        if (isTRUE(input$stream_mode)) {
+          status_msg("Recording with live transcription...")
+        } else {
+          status_msg("Recording... Click Stop when done.")
+        }
         recorded_file(NULL)
+        # Reset streaming state
+        streaming_chunks(list())
+        streaming_text("")
       }
+    })
+
+  # Handle streaming chunks for live transcription
+  shiny::observeEvent(input$streaming_chunk, {
+      chunk_data <- input$streaming_chunk
+      message(">>> Received chunk: ", chunk_data$index)
+      if (is.null(chunk_data)) return()
+
+      # Save chunk to temp file
+      raw_audio <- base64_decode(chunk_data$data)
+      tmp_file <- tempfile(fileext = ".webm")
+      writeBin(raw_audio, tmp_file)
+      message(">>> Saved chunk to: ", tmp_file, " size: ", file.size(tmp_file))
+
+      # Convert to WAV
+      wav_file <- ensure_wav(tmp_file, function(msg) NULL)
+      if (is.null(wav_file)) {
+        message(">>> WAV conversion failed")
+        status_msg(paste0("Chunk ", chunk_data$index + 1, ": conversion failed"))
+        return()
+      }
+      message(">>> Converted to WAV: ", wav_file)
+
+      # Get current model settings
+      model <- if (nzchar(input$model)) input$model else NULL
+      language <- if (nzchar(input$language)) input$language else NULL
+
+      # Transcribe chunk
+      tryCatch({
+          message(">>> Transcribing chunk ", chunk_data$index)
+          res <- stt.api::transcribe(
+            file = wav_file,
+            model = model,
+            language = language,
+            response_format = "verbose_json"
+          )
+          message(">>> Transcription result: ", res$text)
+
+          # Add to accumulated chunks
+          chunks <- streaming_chunks()
+          chunks[[length(chunks) + 1]] <- list(
+            index = chunk_data$index,
+            text = res$text
+          )
+          streaming_chunks(chunks)
+
+          # Update combined text
+          texts <- vapply(chunks, function(x) x$text, character(1))
+          streaming_text(paste(texts, collapse = " "))
+
+          status_msg(sprintf("Live: %d chunks transcribed", length(chunks)))
+
+        }, error = function(e) {
+          message(">>> Transcription error: ", conditionMessage(e))
+          status_msg(paste0("Chunk ", chunk_data$index + 1, ": ", conditionMessage(e)))
+        })
+
+      # Clean up temp files
+      unlink(c(tmp_file, wav_file))
+    })
+
+  # Handle streaming complete signal
+shiny::observeEvent(input$streaming_complete, {
+      status_msg("Streaming complete. Full audio processing...")
+    })
+
+  # Output for live transcription text
+  output$live_text <- shiny::renderText({
+      text <- streaming_text()
+      if (nzchar(text)) text else "Waiting for audio..."
     })
 
   # Apply API settings when changed

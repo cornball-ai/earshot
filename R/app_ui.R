@@ -57,6 +57,11 @@ app_ui <- function() {
             ),
             shiny::span(id = "record_timer", class = "record-timer"),
             shiny::span("or", class = "divider-text")
+          ),
+          # Streaming toggle
+          shiny::div(
+            class = "stream-toggle",
+            shiny::checkboxInput("stream_mode", "Live transcription", value = FALSE)
           )
         ),
 
@@ -119,10 +124,25 @@ app_ui <- function() {
       ),
 
       # Main content
-      bslib::navset_card_tab(
-        bslib::nav_panel("Text", shiny::verbatimTextOutput("transcription")),
-        bslib::nav_panel("Segments", shiny::tableOutput("segments")),
-        bslib::nav_panel("Raw", shiny::verbatimTextOutput("raw"))
+      shiny::div(
+        # Live transcription panel (shown during streaming)
+        shiny::conditionalPanel(
+          condition = "input.stream_mode",
+          shiny::div(
+            class = "live-transcription-container",
+            shiny::tags$label("Live Transcription", class = "control-label"),
+            shiny::div(
+              class = "live-transcription",
+              shiny::textOutput("live_text")
+            )
+          )
+        ),
+        # Final results tabs
+        bslib::navset_card_tab(
+          bslib::nav_panel("Text", shiny::verbatimTextOutput("transcription")),
+          bslib::nav_panel("Segments", shiny::tableOutput("segments")),
+          bslib::nav_panel("Raw", shiny::verbatimTextOutput("raw"))
+        )
       )
     )
   )
