@@ -22,8 +22,16 @@ app_server <- function(
   model_refresh <- shiny::reactiveVal(0) # Triggers model list refresh
 
   # Streaming transcription state
-  streaming_chunks <- shiny::reactiveVal(list())  # Accumulates chunk results
-  streaming_text <- shiny::reactiveVal("")        # Combined live text
+  streaming_chunks <- shiny::reactiveVal(list()) # Accumulates chunk results
+  streaming_text <- shiny::reactiveVal("") # Combined live text
+
+  # History state
+  history <- shiny::reactiveVal(load_history())
+  selected_entry <- shiny::reactiveVal(NULL)
+  history_audio_file <- shiny::reactiveVal(NULL) # Audio from selected history entry
+
+  # Track source type for history
+  source_type <- shiny::reactiveVal("record")
 
   # Detect available backends (in priority order)
   available_backends <- detect_backends()
@@ -64,8 +72,8 @@ app_server <- function(
         id = "config_box",
         style = "font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #94a3b8; padding: 0.5rem; background: #f8fafc; border-radius: 6px; border: none;",
         paste0("Backend: ", backend, "\n",
-               "Model: ", model, "\n",
-               "Language: ", language)
+          "Model: ", model, "\n",
+          "Language: ", language)
       )
     })
 
@@ -182,7 +190,43 @@ app_server <- function(
       writeBin(raw_audio, tmp_file)
 
       recorded_file(tmp_file)
-      status_msg("Recording saved. Click Transcribe to process.")
+      source_type("record")
+
+      # If in stream mode, save history here (where we have the audio)
+      if (isTRUE(input$stream_mode)) {
+        text <- streaming_text()
+        if (nzchar(text)) {
+          tryCatch({
+              message(">>> Creating history entry from streaming (in recorded_audio)")
+              entry <- create_history_entry(
+                text = text,
+                segments = NULL,
+                source_type = "record",
+                model = input$model,
+                language = input$language,
+                backend = "openai"
+              )
+              message(">>> Entry ID: ", entry$id)
+
+              # Save audio file if option enabled
+              if (isTRUE(input$save_audio_files)) {
+                saved_path <- save_audio_file(tmp_file, entry$id)
+                entry$audio_file <- saved_path
+                message(">>> Saved audio to: ", saved_path)
+              }
+
+              new_history <- add_history_entry(history(), entry)
+              message(">>> History length: ", length(new_history))
+              history(new_history)
+              save_history(new_history)
+              message(">>> Saved to: ", history_file())
+            }, error = function(e) {
+              message(">>> HISTORY ERROR: ", conditionMessage(e))
+            })
+        }
+      } else {
+        status_msg("Recording saved. Click Transcribe to process.")
+      }
     })
 
   # Handle recording errors
@@ -199,9 +243,21 @@ app_server <- function(
           status_msg("Recording... Click Stop when done.")
         }
         recorded_file(NULL)
+        history_audio_file(NULL) # Clear history audio when starting new recording
+        selected_entry(NULL)
+        source_type("record")
         # Reset streaming state
         streaming_chunks(list())
         streaming_text("")
+      }
+    })
+
+  # Track upload source type
+  shiny::observeEvent(input$audio_file, {
+      if (!is.null(input$audio_file)) {
+        source_type("upload")
+        history_audio_file(NULL) # Clear history audio when uploading new file
+        selected_entry(NULL)
       }
     })
 
@@ -227,8 +283,16 @@ app_server <- function(
       message(">>> Converted to WAV: ", wav_file)
 
       # Get current model settings
-      model <- if (nzchar(input$model)) input$model else NULL
-      language <- if (nzchar(input$language)) input$language else NULL
+      if (nzchar(input$model)) {
+        model <- input$model
+      } else {
+        model <- NULL
+      }
+      if (nzchar(input$language)) {
+        language <- input$language
+      } else {
+        language <- NULL
+      }
 
       # Transcribe chunk
       tryCatch({
@@ -264,9 +328,25 @@ app_server <- function(
       unlink(c(tmp_file, wav_file))
     })
 
-  # Handle streaming complete signal
-shiny::observeEvent(input$streaming_complete, {
-      status_msg("Streaming complete. Full audio processing...")
+  # Handle streaming complete signal - just update display
+  # History is saved in recorded_audio handler where we have the audio file
+  shiny::observeEvent(input$streaming_complete, {
+      text <- streaming_text()
+
+      if (!nzchar(text)) {
+        status_msg("Streaming complete. No text captured.")
+        return()
+      }
+
+      # Set result for display
+      result(list(
+          text = text,
+          segments = NULL,
+          backend = "openai",
+          language = input$language
+        ))
+
+      status_msg(sprintf("Done. %d chunks transcribed.", length(streaming_chunks())))
     })
 
   # Output for live transcription text
@@ -298,8 +378,12 @@ shiny::observeEvent(input$streaming_complete, {
         return()
       }
 
+      # Store original path for audio saving
+      original_audio_path <- audio_path
+
       status_msg("Preparing audio...")
       result(NULL)
+      selected_entry(NULL)
 
       # Convert to 16-bit wav if needed
       audio_path <- ensure_wav(audio_path, status_msg)
@@ -307,58 +391,89 @@ shiny::observeEvent(input$streaming_complete, {
 
       shiny::withProgress(message = "Transcribing...", value = 0, {
 
-        shiny::incProgress(0.1, detail = "Preparing")
+          shiny::incProgress(0.1, detail = "Preparing")
 
-        if (nzchar(input$model)) {
-          model <- input$model
-        } else {
-          model <- NULL
-        }
-
-        # Check if native whisper model is downloaded
-        if (input$backend == "whisper" && !is.null(model)) {
-          if (requireNamespace("whisper", quietly = TRUE) &&
-            !whisper::model_exists(model)) {
-            status_msg(paste0(
-                "Model '", model, "' not downloaded. ",
-                "Use the Download Weights button above."
-              ))
-            return()
+          if (nzchar(input$model)) {
+            model <- input$model
+          } else {
+            model <- NULL
           }
-        }
-        if (nzchar(input$language)) {
-          language <- input$language
-        } else {
-          language <- NULL
-        }
-        if (nzchar(input$prompt)) {
-          prompt <- input$prompt
-        } else {
-          prompt <- NULL
-        }
 
-        shiny::incProgress(0.2, detail = "Running transcription")
+          # Check if native whisper model is downloaded
+          if (input$backend == "whisper" && !is.null(model)) {
+            if (requireNamespace("whisper", quietly = TRUE) &&
+              !whisper::model_exists(model)) {
+              status_msg(paste0(
+                  "Model '", model, "' not downloaded. ",
+                  "Use the Download Weights button above."
+                ))
+              return()
+            }
+          }
+          if (nzchar(input$language)) {
+            language <- input$language
+          } else {
+            language <- NULL
+          }
+          if (nzchar(input$prompt)) {
+            prompt <- input$prompt
+          } else {
+            prompt <- NULL
+          }
 
-        tryCatch({
-            res <- stt.api::transcribe(
-              file = audio_path,
-              model = model,
-              language = language,
-              prompt = prompt,
-              response_format = "verbose_json"
-            )
+          shiny::incProgress(0.2, detail = "Running transcription")
 
-            shiny::incProgress(0.7, detail = "Done")
+          tryCatch({
+              res <- stt.api::transcribe(
+                file = audio_path,
+                model = model,
+                language = language,
+                prompt = prompt,
+                response_format = "verbose_json"
+              )
 
-            result(res)
-            recorded_file(NULL) # Clear after successful transcription
-            status_msg(sprintf("Done. Backend: %s, Language: %s",
-              res$backend, res$language %||% "auto"))
+              shiny::incProgress(0.7, detail = "Done")
 
-        }, error = function(e) {
-          status_msg(paste("Error:", conditionMessage(e)))
-        })
-      }) # end withProgress
+              result(res)
+              recorded_file(NULL) # Clear after successful transcription
+              status_msg(sprintf("Done. Backend: %s, Language: %s",
+                  res$backend, res$language %||% "auto"))
+
+              # Add to history
+              tryCatch({
+                  message(">>> Creating history entry")
+                  entry <- create_history_entry(
+                    text = res$text,
+                    segments = res$segments,
+                    source_type = source_type(),
+                    model = model,
+                    language = language,
+                    backend = res$backend,
+                    raw = res$raw
+                  )
+                  message(">>> Entry ID: ", entry$id)
+
+                  # Save audio file if option enabled
+                  if (isTRUE(input$save_audio_files)) {
+                    saved_path <- save_audio_file(original_audio_path, entry$id)
+                    entry$audio_file <- saved_path
+                    message(">>> Saved audio to: ", saved_path)
+                  }
+
+                  # Add to history and save
+                  new_history <- add_history_entry(history(), entry)
+                  message(">>> History length: ", length(new_history))
+                  history(new_history)
+                  save_history(new_history)
+                  message(">>> Saved to: ", history_file())
+                }, error = function(e) {
+                  message(">>> HISTORY ERROR: ", conditionMessage(e))
+                })
+
+            }, error = function(e) {
+              status_msg(paste("Error:", conditionMessage(e)))
+            })
+        }) # end withProgress
     })
 
   output$status <- shiny::renderText({
@@ -388,28 +503,36 @@ shiny::observeEvent(input$streaming_complete, {
 
   # Audio preview
   output$audio_preview <- shiny::renderUI({
-      # Check for recorded file first, then uploaded
-      audio_path <- recorded_file()
-      audio_type <- "audio/webm"
+      # If viewing history entry, only show history audio (or nothing)
+      if (!is.null(selected_entry())) {
+        audio_path <- history_audio_file()
+        if (is.null(audio_path) || !file.exists(audio_path)) {
+          return(NULL)
+        }
+      } else {
+        # Check for recorded file first, then uploaded
+        audio_path <- recorded_file()
 
-      if (is.null(audio_path) && !is.null(input$audio_file)) {
-        audio_path <- input$audio_file$datapath
-        # Guess type from extension
-        ext <- tolower(tools::file_ext(input$audio_file$name))
-        audio_type <- switch(ext,
-          mp3 = "audio/mpeg",
-          wav = "audio/wav",
-          m4a = "audio/mp4",
-          ogg = "audio/ogg",
-          flac = "audio/flac",
-          webm = "audio/webm",
-          "audio/mpeg"
-        )
+        if (is.null(audio_path) && !is.null(input$audio_file)) {
+          audio_path <- input$audio_file$datapath
+        }
+
+        if (is.null(audio_path) || !file.exists(audio_path)) {
+          return(NULL)
+        }
       }
 
-      if (is.null(audio_path) || !file.exists(audio_path)) {
-        return(NULL)
-      }
+      # Guess type from extension
+      ext <- tolower(tools::file_ext(audio_path))
+      audio_type <- switch(ext,
+        mp3 = "audio/mpeg",
+        wav = "audio/wav",
+        m4a = "audio/mp4",
+        ogg = "audio/ogg",
+        flac = "audio/flac",
+        webm = "audio/webm",
+        "audio/webm"
+      )
 
       # Encode as base64 data URI
       audio_data <- base64_encode(readBin(audio_path, "raw", file.info(audio_path)$size))
@@ -424,6 +547,110 @@ shiny::observeEvent(input$streaming_complete, {
           style = "width: 100%;"
         )
       )
+    })
+
+  # History list rendering
+  output$history_list <- shiny::renderUI({
+      hist <- history()
+      sel <- selected_entry()
+
+      if (length(hist) == 0) {
+        return(shiny::div(
+            class = "history-empty",
+            "No transcriptions yet"
+          ))
+      }
+
+      items <- lapply(hist, function(entry) {
+          is_selected <- !is.null(sel) && sel == entry$id
+          has_audio <- !is.null(entry$audio_file) && file.exists(entry$audio_file)
+
+          # Only show icon if audio is saved
+          icon_el <- if (has_audio) {
+            if (entry$source_type == "upload") {
+              icon <- "upload"
+            } else {
+              icon <- "mic"
+            }
+            shiny::span(class = paste("history-icon", icon))
+          } else {
+            NULL
+          }
+
+          shiny::div(
+            class = paste("history-item", if (is_selected) "selected" else ""),
+            `data-id` = entry$id,
+            onclick = sprintf("Shiny.setInputValue('history_view', '%s', {priority: 'event'})", entry$id),
+            shiny::div(
+              class = "history-item-header",
+              icon_el,
+              shiny::span(class = "history-timestamp", format_timestamp(entry$timestamp)),
+              shiny::tags$button(
+                class = "history-delete-btn",
+                onclick = sprintf("event.stopPropagation(); Shiny.setInputValue('history_delete', '%s', {priority: 'event'})", entry$id),
+                "x"
+              )
+            ),
+            shiny::div(
+              class = "history-preview",
+              truncate_text(entry$text, 80)
+            )
+          )
+        })
+
+      shiny::tagList(items)
+    })
+
+  # Handle history item view
+  shiny::observeEvent(input$history_view, {
+      id <- input$history_view
+      hist <- history()
+
+      # Find entry
+      idx <- which(vapply(hist, function(e) e$id == id, logical(1)))
+      if (length(idx) == 0) return()
+
+      entry <- hist[[idx]]
+      selected_entry(id)
+
+      # Clear current recording and set history audio
+      recorded_file(NULL)
+      if (!is.null(entry$audio_file) && file.exists(entry$audio_file)) {
+        history_audio_file(entry$audio_file)
+      } else {
+        history_audio_file(NULL)
+      }
+
+      # Load entry into result view
+      result(list(
+          text = entry$text,
+          segments = entry$segments,
+          backend = entry$backend,
+          language = entry$language,
+          raw = entry$raw
+        ))
+
+      status_msg(sprintf("Loaded: %s (%s)",
+          format_timestamp(entry$timestamp),
+          entry$backend %||% "unknown"))
+    })
+
+  # Handle history item delete
+  shiny::observeEvent(input$history_delete, {
+      id <- input$history_delete
+
+      # Delete entry
+      updated <- delete_history_entry(history(), id)
+      history(updated)
+      save_history(updated)
+
+      # Clear selection if deleted entry was selected
+      if (!is.null(selected_entry()) && selected_entry() == id) {
+        selected_entry(NULL)
+        result(NULL)
+      }
+
+      status_msg("Entry deleted")
     })
 }
 
