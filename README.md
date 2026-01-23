@@ -1,5 +1,7 @@
 # earshot
 
+![earshot](https://raw.githubusercontent.com/cornball-ai/earshot/main/inst/www/logo.png)
+
 Shiny app for speech-to-text transcription using [stt.api](https://github.com/cornball-ai/stt.api).
 
 ## Installation
