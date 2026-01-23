@@ -1,6 +1,6 @@
 # earshot
 
-<img src="inst/app/www/logo.png" alt="earshot" height="64">
+<img src="inst/app/www/logo.png" alt="earshot" height="256">
 
 Shiny app for speech-to-text transcription using [stt.api](https://github.com/cornball-ai/stt.api).
 
