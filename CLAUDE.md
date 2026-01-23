@@ -41,13 +41,7 @@ r -e 'rhydrogen::load_all(); run_app()'
 
 ## Backend Configuration
 
-Configure stt.api before running:
-
-```r
-# Local whisper server
-stt.api::set_stt_base("http://localhost:4123")
-
-# OpenAI API
-stt.api::set_stt_base("https://api.openai.com")
-stt.api::set_stt_key(Sys.getenv("OPENAI_API_KEY"))
-```
+The app auto-configures stt.api on startup:
+- Detects available backends (whisper, audio.whisper, OpenAI)
+- Uses `OPENAI_API_KEY` env var if set
+- Settings can be changed via the Settings sidebar in the UI
