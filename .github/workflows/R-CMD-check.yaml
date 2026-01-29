@@ -8,6 +8,7 @@ on:
 
 env:
   _R_CHECK_FORCE_SUGGESTS_: "false"
+  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   R-CMD-check:
