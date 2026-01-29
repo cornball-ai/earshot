@@ -1,1 +1,0 @@
-/home/troy/claude-files/earshot.md
