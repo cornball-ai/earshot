@@ -27,6 +27,10 @@ jobs:
       - name: Setup
         uses: eddelbuettel/github-actions/r-ci@master
 
+      - name: Configure GitHub PAT
+        run: |
+          echo "GITHUB_PAT=${GITHUB_PAT}" >> ~/.Renviron
+
       - name: Dependencies
         run: ./run.sh install_deps
 
