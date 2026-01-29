@@ -8,7 +8,6 @@ on:
 
 env:
   _R_CHECK_FORCE_SUGGESTS_: "false"
-  GITHUB_PAT: ${{ secrets.PAT_GITHUB }}
 
 jobs:
   R-CMD-check:
@@ -27,13 +26,8 @@ jobs:
       - name: Setup
         uses: eddelbuettel/github-actions/r-ci@master
 
-      - name: Configure GitHub PAT
-        run: |
-          echo "GITHUB_PAT=${GITHUB_PAT}" >> ~/.Renviron
-          Rscript -e 'cat("GITHUB_PAT configured:", nchar(Sys.getenv("GITHUB_PAT")) > 0, "\n")'
-
       - name: Dependencies
-        run: ./run.sh install_all
+        run: ./run.sh install_deps
 
       - name: Test
         run: ./run.sh run_tests
