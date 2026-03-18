@@ -297,7 +297,7 @@ app_server <- function(
       # Transcribe chunk
       tryCatch({
           message(">>> Transcribing chunk ", chunk_data$index)
-          res <- stt.api::transcribe(
+          res <- stt.api::stt(
             file = wav_file,
             model = model,
             language = language,
@@ -424,7 +424,7 @@ app_server <- function(
           shiny::incProgress(0.2, detail = "Running transcription")
 
           tryCatch({
-              res <- stt.api::transcribe(
+              res <- stt.api::stt(
                 file = audio_path,
                 model = model,
                 language = language,
