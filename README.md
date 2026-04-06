@@ -7,8 +7,7 @@ Shiny app for speech-to-text transcription using [stt.api](https://github.com/co
 ## Installation
 
 ```r
-remotes::install_github("cornball-ai/whisper")
-remotes::install_github("cornball-ai/stt.api")
+install.packages(c("whisper", "stt.api"))
 remotes::install_github("cornball-ai/earshot")
 ```
 
@@ -54,7 +53,7 @@ earshot uses [stt.api](https://github.com/cornball-ai/stt.api) which supports mu
 Install the whisper package for local transcription with no API dependencies:
 
 ```r
-remotes::install_github("cornball-ai/whisper")
+install.packages("whisper")
 ```
 
 Models are downloaded automatically on first use.
