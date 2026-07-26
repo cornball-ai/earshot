@@ -10,15 +10,15 @@
   let currentStream = null;
   let webmHeader = null;  // Cached header from first chunk
 
-  // Initialize when Shiny is ready
-  $(document).on('shiny:connected', function() {
+  // Initialize once the glinty client has a session
+  document.addEventListener('glinty:connected', function () {
     const recordBtn = document.getElementById('record_btn');
     if (!recordBtn) return;
 
     recordBtn.addEventListener('click', toggleRecording);
 
     // Listen for stream mode changes
-    Shiny.addCustomMessageHandler('set_stream_mode', function(enabled) {
+    Glinty.addCustomMessageHandler('set_stream_mode', function(enabled) {
       streamMode = enabled;
     });
   });
@@ -34,14 +34,14 @@
   async function startRecording() {
     // Check for secure context (HTTPS or localhost)
     if (!window.isSecureContext) {
-      Shiny.setInputValue('recording_error',
+      Glinty.setInputValue('recording_error',
         'Microphone requires HTTPS. Access via localhost or enable HTTPS.');
       return;
     }
 
     // Check for mediaDevices API
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      Shiny.setInputValue('recording_error',
+      Glinty.setInputValue('recording_error',
         'Microphone not supported in this browser. Try Chrome or Firefox.');
       return;
     }
@@ -88,7 +88,7 @@
               blobToSend = new Blob(audioChunks, { type: 'audio/webm' });
             }
 
-            sendChunkToShiny(blobToSend, chunkIndex);
+            sendChunk(blobToSend, chunkIndex);
             chunkIndex++;
           }
         }
@@ -99,13 +99,13 @@
         stream.getTracks().forEach(track => track.stop());
         currentStream = null;
 
-        // Convert to blob and send to Shiny
+        // Convert to blob and send to the server
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        sendAudioToShiny(audioBlob);
+        sendAudio(audioBlob);
 
         // Signal streaming complete if in stream mode
         if (streamMode) {
-          Shiny.setInputValue('streaming_complete', {
+          Glinty.setInputValue('streaming_complete', {
             total_chunks: chunkIndex,
             timestamp: Date.now()
           });
@@ -123,11 +123,11 @@
       isRecording = true;
       updateUI(true);
 
-      Shiny.setInputValue('recording_status', 'recording');
+      Glinty.setInputValue('recording_status', 'recording');
 
     } catch (err) {
       console.error('Microphone access error:', err);
-      Shiny.setInputValue('recording_error', err.message);
+      Glinty.setInputValue('recording_error', err.message);
     }
   }
 
@@ -146,18 +146,19 @@
     return -1;
   }
 
-  function sendChunkToShiny(blob, index) {
+  function sendChunk(blob, index) {
     const reader = new FileReader();
     reader.onloadend = () => {
       const base64data = reader.result.split(',')[1];
-      // priority: "event" forces Shiny to trigger observer for each chunk
-      Shiny.setInputValue('streaming_chunk', {
+      // Every write invalidates in glinty, so each chunk fires the
+      // observer without needing a priority hint
+      Glinty.setInputValue('streaming_chunk', {
         data: base64data,
         type: blob.type,
         size: blob.size,
         index: index,
         timestamp: Date.now()
-      }, {priority: "event"});
+      });
     };
     reader.readAsDataURL(blob);
   }
@@ -167,7 +168,7 @@
       mediaRecorder.stop();
       isRecording = false;
       updateUI(false);
-      Shiny.setInputValue('recording_status', 'stopped');
+      Glinty.setInputValue('recording_status', 'stopped');
     }
   }
 
@@ -184,12 +185,12 @@
     }
   }
 
-  function sendAudioToShiny(blob) {
+  function sendAudio(blob) {
     const reader = new FileReader();
     reader.onloadend = () => {
-      // Send base64 data to Shiny (strip data URL prefix)
+      // Send base64 data to the server (strip data URL prefix)
       const base64data = reader.result.split(',')[1];
-      Shiny.setInputValue('recorded_audio', {
+      Glinty.setInputValue('recorded_audio', {
         data: base64data,
         type: blob.type,
         size: blob.size,

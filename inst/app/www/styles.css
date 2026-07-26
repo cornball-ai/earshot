@@ -65,104 +65,151 @@ body {
   line-height: 1.7;
 }
 
-/* Well/sidebar */
-.well {
-  background: var(--bg-card);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-/* Primary button */
-.btn-primary {
+/* Primary button (glinty's g-btn) */
+.g-btn {
   background: var(--gradient-primary);
   border: none;
+  color: #fff;
+  font-family: inherit;
+  font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
   border-radius: 8px;
   padding: 0.5rem 1.25rem;
 }
 
-.btn-primary:hover, .btn-primary:focus {
+.g-btn:hover, .g-btn:focus {
   background: var(--gradient-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
 }
 
-.btn-primary:active {
+.g-btn:active {
   transform: translateY(0);
 }
 
+/* The transcribe button spans its card */
+#transcribe {
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
 /* Form inputs */
-.form-control, .form-select, .shiny-input-container select {
+.g-input, .g-select, .g-textarea, .g-number, .g-date {
+  width: 100%;
   border: 1px solid var(--border-light);
   border-radius: 8px;
   padding: 0.5rem 0.75rem;
   font-family: 'Inter', sans-serif;
+  font-size: 0.9rem;
+  background: #fff;
+  color: var(--text-primary);
   transition: all 0.2s ease;
 }
 
-.form-control:focus, .form-select:focus {
+.g-input:focus, .g-select:focus, .g-textarea:focus, .g-number:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
   outline: none;
 }
 
+.g-input-group {
+  margin-bottom: 0.75rem;
+}
+
 /* Labels */
+.g-input-group label,
 .control-label {
+  display: block;
   font-weight: 500;
   color: var(--text-secondary);
   font-size: 0.875rem;
   margin-bottom: 0.375rem;
 }
 
+/* Checkboxes */
+.g-checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.g-checkbox-group label {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
 /* File input */
-.btn-file {
+.g-file {
+  width: 100%;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.g-file::file-selector-button {
   background: var(--gradient-primary);
   border: none;
   color: white;
+  font-family: inherit;
   font-weight: 500;
   border-radius: 8px;
+  padding: 0.4rem 0.9rem;
+  margin-right: 0.75rem;
+  cursor: pointer;
 }
 
-.btn-file:hover {
+.g-file::file-selector-button:hover {
   background: var(--gradient-hover);
 }
 
-/* Tabs */
-.nav-tabs {
-  border-bottom: 1px solid var(--border-light);
+/* Tabs (glinty's tabset) */
+.g-tabset {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
 }
 
-.nav-tabs .nav-link {
+.g-tab-nav {
+  border-bottom: 1px solid var(--border-light);
+  gap: 0;
+}
+
+.g-tab-btn {
+  font-family: inherit;
   font-weight: 500;
   color: var(--text-secondary);
   border: none;
   border-bottom: 2px solid transparent;
+  background: none;
   padding: 0.75rem 1rem;
+  cursor: pointer;
   transition: all 0.2s ease;
 }
 
-.nav-tabs .nav-link:hover {
+.g-tab-btn:hover {
   color: var(--primary);
-  border-color: transparent;
 }
 
-.nav-tabs .nav-link.active {
+.g-tab-btn.g-tab-active {
   color: var(--primary);
   background: none;
-  border-color: var(--primary);
+  border-bottom-color: var(--primary);
 }
 
-/* Tab content */
-.tab-content {
+.g-tab-body {
   padding: 1rem 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 /* Pre/code output */
-pre, .shiny-text-output {
+pre, .g-verbatim-output {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.875rem;
   background: var(--bg-card);
@@ -174,55 +221,83 @@ pre, .shiny-text-output {
 }
 
 /* Status text */
-pre#status,
-pre#config_display {
+.config-box,
+.status-line {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.8rem;
-  color: var(--text-muted) !important;
+  color: var(--text-muted);
   padding: 0.5rem;
   background: var(--bg-light);
   border-radius: 6px;
   border: none;
+  margin: 0 0 0.75rem;
+}
+
+.status-line {
+  margin-top: 1rem;
+  display: block;
 }
 
 /* Table */
-.table {
+.g-table {
+  width: 100%;
   font-size: 0.875rem;
+  border-collapse: collapse;
 }
 
-.table th {
+.g-table th {
   font-weight: 600;
+  text-align: left;
   color: var(--text-secondary);
   border-bottom: 2px solid var(--border-light);
+  padding: 0.4rem 0.5rem;
 }
 
-.table td {
-  border-color: var(--border-light);
+.g-table td {
+  border-bottom: 1px solid var(--border-light);
+  padding: 0.4rem 0.5rem;
 }
 
 /* Horizontal rule */
 hr {
-  border-color: var(--border-light);
-  opacity: 1;
+  border: none;
+  border-top: 1px solid var(--border-light);
   margin: 1rem 0;
 }
 
-/* Notifications */
-.shiny-notification {
-  border-radius: 8px;
-  border: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+/* Modal (glinty) */
+.g-modal-box {
   font-family: 'Inter', sans-serif;
+  border-radius: 12px;
 }
 
-.shiny-notification-message {
-  background: var(--primary);
-  color: white;
+.g-modal-title {
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
-.shiny-notification-error {
-  background: var(--accent);
-  color: white;
+.g-modal-close {
+  background: transparent;
+  border: 1px solid var(--border-light);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.g-modal-close:hover, .g-modal-close:focus {
+  background: var(--bg-light);
+  color: var(--text-primary);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Progress (glinty) */
+.g-progress {
+  font-family: 'Inter', sans-serif;
+  border-radius: 10px;
+}
+
+.g-progress-fill {
+  background: var(--gradient-primary);
 }
 
 /* Scrollbar */
@@ -320,91 +395,6 @@ hr {
   letter-spacing: 0.05em;
 }
 
-/* Settings panel */
-.settings-panel {
-  margin-top: 0.5rem;
-}
-
-.settings-panel summary {
-  cursor: pointer;
-  font-weight: 500;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  padding: 0.25rem 0;
-  user-select: none;
-}
-
-.settings-panel summary:hover {
-  color: var(--primary);
-}
-
-.settings-panel[open] summary {
-  color: var(--primary);
-  margin-bottom: 0.4rem;
-}
-
-.settings-content {
-  padding: 0.5rem;
-  background: var(--bg-light);
-  border-radius: 8px;
-  border: 1px solid var(--border-light);
-}
-
-.settings-content .form-group,
-.settings-content .shiny-input-container {
-  margin-bottom: 0.4rem;
-}
-
-.settings-content .control-label {
-  font-size: 0.75rem;
-  margin-bottom: 0.15rem;
-}
-
-.settings-content .form-control,
-.settings-content .form-select {
-  font-size: 0.8rem;
-  padding: 0.25rem 0.5rem;
-  height: auto;
-}
-
-.settings-content .shiny-input-container:last-of-type {
-  margin-bottom: 0.25rem;
-}
-
-/* Outline button */
-.btn-outline-primary {
-  background: transparent;
-  border: 1px solid var(--primary);
-  color: var(--primary);
-  font-weight: 500;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-outline-primary:hover {
-  background: var(--primary);
-  color: white;
-}
-
-.btn-sm {
-  padding: 0.25rem 0.75rem;
-  font-size: 0.8rem;
-}
-
-/* Stream mode toggle */
-.stream-toggle {
-  margin-top: 0.5rem;
-}
-
-.stream-toggle .form-check {
-  margin-bottom: 0;
-}
-
-.stream-toggle .form-check-label {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-}
-
 /* Live transcription display */
 .live-transcription-container {
   margin-bottom: 1rem;
@@ -432,12 +422,86 @@ hr {
 }
 
 /* ========================================
-   Four-panel layout with bslib sidebars
+   Three-column layout (plain flexbox)
    ======================================== */
 
-/* Main layout fills available space */
 .main-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1rem;
   height: calc(100vh - 60px);
+  box-sizing: border-box;
+}
+
+.left-sidebar,
+.right-sidebar {
+  flex: 0 0 280px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.center-content {
+  flex: 1;
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  min-width: 0;
+  min-height: 0;
+}
+
+.input-card {
+  flex: 0 0 40%;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sidebar-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+  letter-spacing: -0.01em;
+  margin-bottom: 0.75rem;
+}
+
+.panel-header {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+/* Responsive: stack on narrow screens rather than crushing columns */
+@media (max-width: 1100px) {
+  .main-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .left-sidebar,
+  .right-sidebar {
+    flex: 0 0 auto;
+  }
+
+  .center-content {
+    flex-direction: column;
+  }
+
+  .input-card {
+    flex: 0 0 auto;
+  }
 }
 
 /* Record row */
@@ -445,23 +509,6 @@ hr {
   display: flex;
   align-items: center;
   gap: 1rem;
-}
-
-.upload-section {
-  flex: 1;
-  min-width: 100px;
-}
-
-.upload-section .shiny-input-container {
-  margin-bottom: 0;
-}
-
-.upload-section .form-group {
-  margin-bottom: 0;
-}
-
-.upload-section .input-group {
-  margin-top: 0;
 }
 
 /* Transcription text output */
@@ -482,17 +529,17 @@ hr {
 
 /* Results column */
 .results-column {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  height: 100%;
+  min-width: 0;
   min-height: 0;
-}
-
-.results-column > .bslib-card:last-child,
-.results-column > .card:last-child {
-  flex: 1;
-  min-height: 0;
+  padding: 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .live-card {
@@ -598,17 +645,26 @@ hr {
   -webkit-box-orient: vertical;
 }
 
-/* Settings panel */
-.sidebar-right .sidebar-content .shiny-input-container {
+/* Settings sidebar sizing */
+.right-sidebar .g-input-group {
   margin-bottom: 0.75rem;
 }
 
-.sidebar-right .sidebar-content .control-label {
+.right-sidebar .g-input-group label {
   font-size: 0.8rem;
   margin-bottom: 0.25rem;
 }
 
-.sidebar-right .sidebar-content .form-control,
-.sidebar-right .sidebar-content .form-select {
+.right-sidebar .g-input,
+.right-sidebar .g-select {
   font-size: 0.875rem;
+}
+
+/* Audio preview */
+.audio-preview {
+  margin: 0.75rem 0;
+}
+
+.audio-preview-player {
+  width: 100%;
 }

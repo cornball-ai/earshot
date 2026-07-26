@@ -6,9 +6,13 @@
 app_ui()
 }
 \value{
-A Shiny UI object.
+A glinty UI tree.
 }
 \description{
-Create the Earshot Shiny app user interface.
+Create the Earshot app user interface.
+}
+\details{
+Assets are served from inst/app/www under /static/ by run_app().
+
 }
 \keyword{internal}

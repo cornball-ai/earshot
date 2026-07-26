@@ -1,19 +1,26 @@
 Package: earshot
-Title: Speech-to-Text Shiny App
-Version: 0.1.0
-Authors@R: person("Troy", "Hernandez", role = c("aut", "cre"),
-                  email = "troy@cornball.ai")
-Description: A Shiny application for transcribing audio files using stt.api.
-    Upload audio files and get transcriptions with timestamps.
+Title: Speech-to-Text Web App
+Version: 0.2.0
+Authors@R: c(
+    person("Troy", "Hernandez", email = "troy@cornball.ai",
+           role = c("aut", "cre"),
+           comment = c(ORCID = "0009-0005-4248-604X")),
+    person("cornball.ai", role = "cph"))
+Description: A web application for transcribing audio files using
+    'stt.api'. Record from the microphone or upload audio files and get
+    transcriptions with timestamps, with live transcription while
+    recording. Built on 'glinty', so the only web dependencies are
+    'jsonlite' and 'digest'.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
-    bslib,
-    shiny,
-    stt.api
+    glinty (>= 0.4.0),
+    jsonlite,
+    stt.api,
+    tools,
+    utils
 Suggests:
     audio.whisper,
-    jsonlite,
     pkgload,
     tinytest,
     whisper
