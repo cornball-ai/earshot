@@ -14,7 +14,7 @@ Description: A web application for transcribing audio files using
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
-    glinty (>= 0.4.0),
+    glinty (>= 0.4.1),
     jsonlite,
     stt.api,
     tools,
