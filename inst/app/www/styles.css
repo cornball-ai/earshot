@@ -397,23 +397,74 @@ hr {
 /* Audio preview */
 
 
-/* What the component vocabulary does not express.
+
+/* ========================================
+   What the component vocabulary does not express
+   ========================================
+
    Everything else that used to live here -- the flex rows and
    columns, the card borders, the muted text -- is now said by the
-   components themselves and was deleted rather than retargeted. */
+   components themselves and was deleted rather than retargeted.
+   These are the leftovers: viewport-relative sizing, scroll
+   containers, and the responsive breakpoint. None of them is a
+   thing the wire carries, and all of them are browser-only by
+   nature. A native client sizes to its window and scrolls its own
+   way. */
 
-/* The sidebars run the full height of the row beside a taller
-   centre. glinty's row aligns to flex-start, which is right for
-   content and wrong for a sidebar. */
+/* glinty's .g-page centres content in 760px, which is right for a
+   document and wrong for a three-pane app. */
+.g-page {
+  max-width: none;
+  padding: 0;
+}
+
 #main-layout {
   align-items: stretch;
+  gap: 1rem;
+  padding: 1rem;
+  height: calc(100vh - 60px);
+  box-sizing: border-box;
+}
+
+/* Each pane scrolls itself rather than the page. min-height: 0 is the
+   flex-item override without which a child never shrinks below its
+   content and the whole row overflows instead. */
+#left-sidebar,
+#right-sidebar {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+#center-content {
+  min-width: 0;
   min-height: 0;
 }
 
-/* The input card scrolls when it outgrows its 2-of-5 share, instead
-   of pushing the results column off the screen. min-width: 0 is the
-   flex-item override that lets it shrink at all. */
 #input-card {
   min-width: 0;
   overflow-y: auto;
+}
+
+/* Stack rather than crush the columns on a narrow screen. The wire
+   says nothing about breakpoints -- proportions are proportions at
+   every size -- so this is the browser deciding for itself. */
+@media (max-width: 1100px) {
+  #main-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  #left-sidebar,
+  #right-sidebar {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  #center-content {
+    flex-direction: column;
+  }
+
+  #input-card {
+    flex: 0 0 auto;
+  }
 }

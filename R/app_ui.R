@@ -52,7 +52,7 @@ app_ui <- function() {
 
                              # Left: history. Fixed width, so the centre gets the rest.
                              glinty::panel(
-                    variant = "sidebar", width = 280L,
+                    variant = "sidebar", width = 280L, id = "left-sidebar",
                     glinty::heading("History", level = 3L),
                     glinty::ui_output("config_display"),
                     glinty::checkbox_input("save_audio_files",
@@ -60,9 +60,11 @@ app_ui <- function() {
                     glinty::ui_output("history_list")
                 ),
 
-                             # Centre: input and results. Takes the spare space.
-                             glinty::column(
-                    grow = 1L, gap = 16L,
+                             # Centre: input beside results, filling the space
+                             # the two sidebars leave. A row, not a column --
+                             # these two panes sit side by side.
+                             glinty::row(
+                    grow = 1L, gap = 16L, id = "center-content",
 
                     # 2:3 rather than a 40% basis. The vocabulary has
                     # proportions, not percentages, and the ratio is
@@ -70,11 +72,19 @@ app_ui <- function() {
                     glinty::panel(
                                   variant = "card", grow = 2L, id = "input-card",
 
-                                  # recorder.js finds this by id and drives
-                                  # MediaRecorder from it. It is a real glinty
-                                  # button so it renders in every frontend; only
-                                  # the recording behind it is browser-only.
-                                  glinty::button("record_btn", "Record"),
+                                  # Recording is MediaRecorder, which exists in
+                                  # a browser and nowhere else. raw_html is the
+                                  # honest way to say that: the browser renders
+                                  # it, every other frontend refuses it by name,
+                                  # and nobody is shown a Record button that
+                                  # cannot record. A glinty button() here would
+                                  # draw everywhere and work in one place, which
+                                  # is the dead control this codebase keeps
+                                  # removing. recorder.js binds it by id.
+                                  glinty::tag(paste0(
+                        "<button type=\"button\" id=\"record_btn\" ",
+                        "class=\"g-btn btn-record\">Record</button>"
+                    )),
 
                                   glinty::divider("or"),
 
@@ -125,7 +135,7 @@ app_ui <- function() {
 
                              # Right: settings. Fixed width, like the left.
                              glinty::panel(
-                    variant = "sidebar", width = 280L,
+                    variant = "sidebar", width = 280L, id = "right-sidebar",
                     glinty::heading("Settings", level = 3L),
 
                     glinty::select_input(
