@@ -65,11 +65,10 @@ app_server <- function(input, output, session) {
     output$config_display <- glinty::render_ui(function() {
         language <- opt_str(input$language()) %||% "auto"
 
-        glinty::tag("pre",
-                    text = paste0("Backend: ", current_backend(), "\n",
-                                  "Model: ", current_model() %||% "...", "\n",
-                                  "Language: ", language),
-                    attrs = list(id = "config_box", class = "config-box"))
+        glinty::txt(paste0("Backend: ", current_backend(), " / ",
+                           "Model: ", current_model() %||% "...", " / ",
+                           "Language: ", language),
+                    variant = "muted")
     })
 
     # Dynamic download model dropdown (only shows models NOT yet downloaded)
@@ -85,16 +84,14 @@ app_server <- function(input, output, session) {
         }
 
         if (length(available) == 0) {
-            glinty::div(
-                        class = "download-model-section text-muted",
-                        "All models downloaded"
-            )
+            glinty::txt("All models downloaded", variant = "muted")
         } else {
-            glinty::div(
-                        class = "download-model-section",
-                        glinty::select_input("download_model", "Download Model",
+            glinty::column(
+                           gap = 8L,
+                           glinty::select_input("download_model", "Download Model",
                     choices = available, selected = available[1]),
-                        glinty::button("download_btn", "Download Weights")
+                           glinty::button("download_btn", "Download Weights",
+                                          icon = "download")
             )
         }
     })
@@ -149,8 +146,8 @@ app_server <- function(input, output, session) {
 
         glinty::show_modal(
                            session,
-                           glinty::p(paste0("Download '", model, "' model (", size_str,
-                    ") from HuggingFace?")),
+                           glinty::txt(paste0("Download '", model, "' model (",
+                    size_str, ") from HuggingFace?")),
                            title = "Download Model?",
                            footer = glinty::row(
                 glinty::modal_button("Cancel"),
@@ -482,7 +479,11 @@ app_server <- function(input, output, session) {
     })
 
     # Audio preview
-    output$audio_preview <- glinty::render_ui(function() {
+    #
+    # render_audio() rather than a hand-built <audio> element: the
+    # value is a source, and which element plays it is the frontend's
+    # problem. NULL leaves the slot empty.
+    output$audio_preview <- glinty::render_audio(function() {
         # If viewing history entry, only show history audio (or nothing)
         if (!is.null(selected_entry())) {
             audio_path <- history_audio_file()
@@ -514,18 +515,7 @@ app_server <- function(input, output, session) {
         # Encode as base64 data URI
         audio_data <- base64_encode(
                                     readBin(audio_path, "raw", file.info(audio_path)$size))
-        data_uri <- paste0("data:", audio_type, ";base64,", audio_data)
-
-        glinty::div(
-                    class = "audio-preview",
-                    glinty::tag("label", text = "Preview",
-                                attrs = list(class = "control-label")),
-                    glinty::tag("audio", attrs = list(
-                    src = data_uri,
-                    controls = "controls",
-                    class = "audio-preview-player"
-                ))
-        )
+        paste0("data:", audio_type, ";base64,", audio_data)
     })
 
     # History list rendering
@@ -534,10 +524,7 @@ app_server <- function(input, output, session) {
         sel <- selected_entry()
 
         if (length(hist) == 0) {
-            return(glinty::div(
-                               class = "history-empty",
-                               "No transcriptions yet"
-                ))
+            return(glinty::txt("No transcriptions yet", variant = "muted"))
         }
 
         items <- lapply(hist, function(entry) {
@@ -545,52 +532,43 @@ app_server <- function(input, output, session) {
             has_audio <- !is.null(entry$audio_file) &&
             file.exists(entry$audio_file)
 
-            # Only show icon if audio is saved
+            # Only when the audio was kept: the icon says where the
+            # recording came from, and there is nothing to say when
+            # there is no file.
             icon_el <- if (has_audio) {
-                if (identical(entry$source_type, "upload")) {
-                    icon <- "upload"
-                } else {
-                    icon <- "mic"
-                }
-                glinty::span("", class = paste("history-icon", icon))
+                glinty::icon(if (identical(entry$source_type, "upload")) {
+                                 "upload"
+                             } else {
+                                 "microphone"
+                             })
             } else {
                 NULL
             }
 
-            header_children <- list(
-                                    icon_el,
-                                    glinty::span(format_timestamp(entry$timestamp),
-                    class = "history-timestamp"),
-                                    # A click bind carrying the entry id: one server-side
-                                    # handler serves every row, and the nearest bind wins on
-                                    # click, so this never also triggers the row itself.
-                                    glinty::tag("button", text = "x",
-                    attrs = list(class = "history-delete-btn", type = "button"),
-                    bind = list(event = "click", target = "history_delete",
-                                value = entry$id))
-            )
-            header_children <- Filter(Negate(is.null), header_children)
-
-            glinty::tag(
-                        "div",
-                        attrs = list(
-                                     class = trimws(paste("history-item",
-                            if (is_selected) "selected" else ""))
-                ),
-                        bind = list(event = "click", target = "history_view",
-                                    value = entry$id),
-                        children = list(
-                                        glinty::tag("div", attrs = list(class = "history-item-header"),
-                        children = header_children),
-                                        glinty::div(
-                        class = "history-preview",
-                        truncate_text(entry$text, 80)
-                    )
-                )
+            # The timestamp is the button, and it carries the entry id
+            # as its value -- one observer below serves every row and
+            # reads which. Under protocol 2 this was a click bind on
+            # the whole card; v3 has no clickable container, and a
+            # button is the honest component for "press this".
+            glinty::panel(
+                          variant = if (is_selected) "card" else "plain",
+                          glinty::row(
+                                      gap = 8L, align = "center",
+                                      icon_el,
+                                      glinty::button(
+                            "history_view", format_timestamp(entry$timestamp),
+                            variant = "ghost", value = entry$id
+                        ),
+                                      glinty::button("history_delete", "x",
+                                                     variant = "ghost", icon = "trash",
+                                                     value = entry$id)
+                    ),
+                          glinty::txt(truncate_text(entry$text, 80),
+                                      variant = "muted")
             )
         })
 
-        do.call(glinty::div, c(items, list(class = "history-items")))
+        do.call(glinty::column, c(items, list(gap = 8L)))
     })
 
     # Handle history item view
