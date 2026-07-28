@@ -82,8 +82,12 @@ body {
   transform: translateY(0);
 }
 
-/* The transcribe button spans its card */
-#transcribe {
+/* The transcribe button spans its card.
+
+   By routing name, not by id: glinty gives event buttons no DOM id,
+   because nothing makes a button id unique -- several controls may
+   route to one handler. data-g-target is the stable hook. */
+[data-g-target="transcribe"] {
   width: 100%;
   margin-top: 0.5rem;
 }

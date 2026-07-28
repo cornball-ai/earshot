@@ -126,3 +126,30 @@ expect_true("whisper-1" %in% models$choices)
 expect_equal(get_models_for_backend("nonsense")$default, "whisper-1")
 
 session_end(s)
+
+# --- no stylesheet rule targets something the page never renders ---
+#
+# The port moved elements from classes to ids and glinty later stopped
+# giving event buttons a DOM id at all, so a selector could quietly
+# stop matching and nothing would notice: CSS fails silently by
+# design. #transcribe was dead for exactly that reason.
+css <- readLines(system.file("app/www/styles.css", package = "earshot"),
+                 warn = FALSE)
+served <- component_to_html(app_ui())
+ids_in_page <- unique(gsub('.*id="([^"]*)".*', "\\1",
+                           regmatches(served,
+                                      gregexpr('id="[^"]*"', served))[[1]]))
+
+# every #id selector at the start of a line, ignoring media-query
+# indentation
+sel <- regmatches(css, regexpr("^\\s*#[A-Za-z0-9_-]+", css))
+sel <- unique(sub("^\\s*#", "", sel))
+expect_true(length(sel) > 0L)
+dead <- setdiff(sel, ids_in_page)
+expect_equal(dead, character(0))
+
+# and the routing hooks the stylesheet uses are really emitted
+targets <- regmatches(css, gregexpr('\\[data-g-target="[^"]*"\\]', css))[[1]]
+for (t in unique(targets)) {
+    expect_true(grepl(t, served, fixed = TRUE))
+}
