@@ -447,7 +447,12 @@ hr {
 
 /* Stack rather than crush the columns on a narrow screen. The wire
    says nothing about breakpoints -- proportions are proportions at
-   every size -- so this is the browser deciding for itself. */
+   every size -- so this is the browser deciding for itself.
+
+   glinty puts the sizing in custom properties consumed by .g-sized
+   rather than in an inline style, so an id selector outweighs it and
+   these need no !important. An inline flex would have been
+   unoverridable and these rules would have done nothing. */
 @media (max-width: 1100px) {
   #main-layout {
     flex-direction: column;
