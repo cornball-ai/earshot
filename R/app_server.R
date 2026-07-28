@@ -556,10 +556,11 @@ app_server <- function(input, output, session) {
                                       gap = 8L, align = "center",
                                       icon_el,
                                       glinty::button(
-                            "history_view", format_timestamp(entry$timestamp),
+                            "history_view",
+                            paste("View", format_timestamp(entry$timestamp)),
                             variant = "ghost", value = entry$id
                         ),
-                                      glinty::button("history_delete", "x",
+                                      glinty::button("history_delete", "Delete",
                                                      variant = "ghost", icon = "trash",
                                                      value = entry$id)
                     ),
