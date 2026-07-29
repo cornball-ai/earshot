@@ -39,7 +39,11 @@ expect_true(grepl("data-g-cond", html, fixed = TRUE))
 # type="password" only masks on screen; a value= attribute is plain
 # text in the source, and glinty serves on all interfaces.
 expect_true(grepl('id="api_key"', html, fixed = TRUE))
-expect_false(grepl("sk-", html, fixed = TRUE))
+# Key-shaped, not just the prefix. The placeholder is literally
+# "sk-..." when no key is in the environment, so grepling for "sk-"
+# passed on a machine that had one set and failed on CI, which does
+# not -- reporting a leak that was the hint text all along.
+expect_false(grepl("sk-[A-Za-z0-9_-]{20,}", html))
 key <- Sys.getenv("OPENAI_API_KEY", "")
 if (nzchar(key)) {
   expect_false(grepl(key, html, fixed = TRUE))
