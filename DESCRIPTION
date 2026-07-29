@@ -1,6 +1,6 @@
 Package: earshot
 Title: Speech-to-Text Web App
-Version: 0.2.0
+Version: 0.0.1
 Authors@R: c(
     person("Troy", "Hernandez", email = "troy@cornball.ai",
            role = c("aut", "cre"),
@@ -10,7 +10,8 @@ Description: A web application for transcribing audio files using
     'stt.api'. Record from the microphone or upload audio files and get
     transcriptions with timestamps, with live transcription while
     recording. Built on 'glinty', so the only web dependencies are
-    'jsonlite' and 'digest'.
+    'jsonlite' and 'digest'. Alpha: unreleased, and still changing
+    with 'glinty' underneath it.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
