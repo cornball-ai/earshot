@@ -3,15 +3,8 @@
 \alias{create_history_entry}
 \title{Create a new history entry}
 \usage{
-create_history_entry(
-  text,
-  segments = NULL,
-  source_type = "record",
-  model = NULL,
-  language = NULL,
-  backend = NULL,
-  raw = NULL
-)
+create_history_entry(text, segments = NULL, source_type = "record",
+                     model = NULL, language = NULL, backend = NULL, raw = NULL)
 }
 \arguments{
 \item{text}{Transcribed text}

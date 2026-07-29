@@ -6,7 +6,11 @@ on:
 
 env:
   _R_CHECK_FORCE_SUGGESTS_: "false"
-  GITHUB_PAT: ${{ secrets.PAT_GITHUB }}
+  # Actions provisions this for every run, no secret to rotate.
+  # Anonymous API access is rate-limited per runner IP, so a public
+  # repo still needs a token to fetch reliably -- just not a personal
+  # one that can expire.
+  GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   R-CMD-check:
@@ -25,13 +29,15 @@ jobs:
       - name: Setup
         uses: eddelbuettel/github-actions/r-ci@master
 
-      - name: Configure GitHub PAT
-        run: |
-          echo "GITHUB_PAT=${GITHUB_PAT}" >> ~/.Renviron
-          Rscript -e 'cat("GITHUB_PAT configured:", nchar(Sys.getenv("GITHUB_PAT")) > 0, "\n")'
-
       - name: Dependencies
-        run: ./run.sh install_all
+        run: |
+          Rscript -e '
+          # glinty and stt.api are not on CRAN, and both are public,
+          # so no token is involved.
+          remotes::install_github(c("cornball-ai/glinty", "cornball-ai/stt.api"),
+                                  dependencies = TRUE, upgrade = "never")
+          remotes::install_deps(".", dependencies = TRUE, upgrade = "never")
+          '
 
       - name: Test
         run: ./run.sh run_tests

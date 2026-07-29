@@ -1,7 +1,7 @@
-FROM rocker/shiny:4.4
+FROM rocker/r-ver:4.4
 
 LABEL maintainer="Troy Hernandez <troy@cornball.ai>"
-LABEL description="earshot: Speech-to-text transcription Shiny app (CPU)"
+LABEL description="earshot: Speech-to-text transcription app (CPU)"
 
 # System dependencies for torch and audio processing
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -14,19 +14,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-# Install R packages from CRAN
+# Install R packages from CRAN.
+# glinty replaces shiny + bslib; its only deps are jsonlite and digest.
 RUN install2.r --error --skipinstalled \
     remotes \
-    shiny \
-    bslib \
     httr2 \
-    jsonlite
+    jsonlite \
+    digest
 
 # Install torch (CPU)
 RUN R -e 'install.packages("torch"); torch::install_torch(type = "cpu")'
 
 # Install cornball-ai packages from GitHub
 RUN R -e 'remotes::install_github("cornball-ai/whisper")'
+RUN R -e 'remotes::install_github("cornball-ai/glinty")'
 RUN R -e 'remotes::install_github("cornball-ai/stt.api")'
 RUN R -e 'remotes::install_github("cornball-ai/earshot")'
 
@@ -35,4 +36,4 @@ RUN mkdir -p /root/.cache/whisper
 
 EXPOSE 7802
 
-CMD ["R", "-e", "earshot::run_app(host = '0.0.0.0')"]
+CMD ["R", "-e", "earshot::run_app()"]
