@@ -841,6 +841,17 @@ configure_backend <- function(backend, session = NULL, base = NULL) {
         # network, and it does not ask for one.
         stt.api::set_stt_base(base %||% whisper_base())
         options(stt.api_key = NULL)
+        # stt.api's default total is 60s, which is a fine ceiling for a
+        # short clip and not for an hour of tape. Transcription is not
+        # a quick API call, and a request cut off at the minute mark
+        # looks to the user like the server failed.
+        #
+        # Only the total is ours to set. stt.api passes `timeout` to
+        # curl and leaves `connecttimeout` at R curl's default of 10s,
+        # so a slow *connect* -- a cold Tailscale path negotiating NAT
+        # traversal, say -- fails at ten seconds no matter what this
+        # says. Reach the service over the LAN where you can.
+        options(stt.timeout = getOption("earshot.stt_timeout", 900))
     } else if (backend == "whisper") {
         # In process. No API settings, and stt_route() sends it to the
         # package explicitly so a stale base cannot pull it back out.

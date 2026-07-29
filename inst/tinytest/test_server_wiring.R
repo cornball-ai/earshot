@@ -233,6 +233,20 @@ configure_backend("whisper-api")
 expect_equal(getOption("stt.api_base"), "http://example.test:7809")
 Sys.unsetenv("EARSHOT_WHISPER_BASE")
 
+# Transcription is not a quick API call. stt.api caps the total at 60s
+# by default, which cuts a long recording off and looks to the user
+# like the server failed.
+old_timeout <- getOption("stt.timeout")
+Sys.setenv(EARSHOT_WHISPER_BASE = "http://example.test:7809")
+configure_backend("whisper-api")
+expect_true(getOption("stt.timeout") > 60)
+# and it stays overridable, for whoever knows their own tape better
+options(earshot.stt_timeout = 123)
+configure_backend("whisper-api")
+expect_equal(getOption("stt.timeout"), 123)
+options(earshot.stt_timeout = NULL, stt.timeout = old_timeout)
+Sys.unsetenv("EARSHOT_WHISPER_BASE")
+
 configure_backend("whisper")
 expect_null(getOption("stt.api_base"))
 options(stt.api_base = old_base)
