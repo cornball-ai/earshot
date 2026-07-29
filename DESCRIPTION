@@ -25,3 +25,6 @@ Suggests:
     pkgload,
     tinytest,
     whisper
+Remotes:
+    cornball-ai/glinty,
+    cornball-ai/stt.api
