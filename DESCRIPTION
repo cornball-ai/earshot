@@ -1,6 +1,6 @@
 Package: earshot
 Title: Speech-to-Text Web App
-Version: 0.0.3.2
+Version: 0.0.3.3
 Authors@R: c(
     person("Troy", "Hernandez", email = "troy@cornball.ai",
            role = c("aut", "cre"),
@@ -15,7 +15,7 @@ Description: A web application for transcribing audio files using
 License: MIT + file LICENSE
 Encoding: UTF-8
 Imports:
-    glinty (>= 0.0.5),
+    glinty (>= 0.0.5.28),
     jsonlite,
     stt.api,
     tools,
