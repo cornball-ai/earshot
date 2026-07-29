@@ -26,6 +26,21 @@ app_ui <- function() {
         }
     }
 
+    # The address the API URL field starts at.
+    #
+    # A configured remote whisper is the default backend when there is
+    # one, so the field has to open on its address rather than on
+    # OpenAI's -- otherwise the first thing the server reads from it
+    # points somewhere the selected backend is not.
+    default_api_base <- function() {
+        base <- whisper_base()
+        if (nzchar(base)) {
+            base
+        } else {
+            "https://api.openai.com"
+        }
+    }
+
     glinty::page(
                  title = "earshot",
                  css = "/static/styles.css",
@@ -36,14 +51,14 @@ app_ui <- function() {
                  glinty::panel(
                                id = "earshot-header",
                                glinty::link(
-                    href = "https://cornball.ai", external = TRUE,
-                    children = list(glinty::row(
-                            gap = 12L, align = "center",
-                            glinty::image("/static/logo.png",
-                                          alt = "cornball.ai", height = 32L),
-                            glinty::txt("earshot", variant = "heading")
-                        ))
-                )
+                href = "https://cornball.ai", external = TRUE,
+                children = list(glinty::row(
+                        gap = 12L, align = "center",
+                        glinty::image("/static/logo.png", alt = "cornball.ai",
+                                      height = 32L),
+                        glinty::txt("earshot", variant = "heading")
+                    ))
+            )
         ),
 
                  glinty::row(
@@ -52,142 +67,149 @@ app_ui <- function() {
 
                              # Left: history. Fixed width, so the centre gets the rest.
                              glinty::panel(
-                    variant = "sidebar", width = 280L, id = "left-sidebar",
-                    glinty::heading("History", level = 3L),
-                    glinty::ui_output("config_display"),
-                    glinty::checkbox_input("save_audio_files",
-                                           "Save audio files", FALSE),
-                    glinty::ui_output("history_list")
-                ),
+                variant = "sidebar", width = 280L, id = "left-sidebar",
+                glinty::heading("History", level = 3L),
+                glinty::ui_output("config_display"),
+                glinty::checkbox_input("save_audio_files",
+                                       "Save audio files", FALSE),
+                glinty::ui_output("history_list")
+            ),
 
                              # Centre: input beside results, filling the space
                              # the two sidebars leave. A row, not a column --
                              # these two panes sit side by side.
                              glinty::row(
-                    grow = 1L, gap = 16L, id = "center-content",
+                grow = 1L, gap = 16L, id = "center-content",
 
-                    # 2:3 rather than a 40% basis. The vocabulary has
-                    # proportions, not percentages, and the ratio is
-                    # what the layout actually meant.
-                    glinty::panel(
-                                  variant = "card", grow = 2L, id = "input-card",
+                # 2:3 rather than a 40% basis. The vocabulary has
+                # proportions, not percentages, and the ratio is
+                # what the layout actually meant.
+                glinty::panel(
+                              variant = "card", grow = 2L, id = "input-card",
 
-                                  # Recording is MediaRecorder, which exists in
-                                  # a browser and nowhere else. raw_html is the
-                                  # honest way to say that: the browser renders
-                                  # it, every other frontend refuses it by name,
-                                  # and nobody is shown a Record button that
-                                  # cannot record. A glinty button() here would
-                                  # draw everywhere and work in one place, which
-                                  # is the dead control this codebase keeps
-                                  # removing. recorder.js binds it by id.
-                                  glinty::tag(paste0(
-                        "<button type=\"button\" id=\"record_btn\" ",
-                        "class=\"g-btn btn-record\">Record</button>"
-                    )),
+                              # Recording is MediaRecorder, which exists in
+                              # a browser and nowhere else. raw_html is the
+                              # honest way to say that: the browser renders
+                              # it, every other frontend refuses it by name,
+                              # and nobody is shown a Record button that
+                              # cannot record. A glinty button() here would
+                              # draw everywhere and work in one place, which
+                              # is the dead control this codebase keeps
+                              # removing. recorder.js binds it by id.
+                              glinty::tag(paste0(
+                            "<button type=\"button\" id=\"record_btn\" ",
+                            "class=\"g-btn btn-record\">Record</button>"
+                        )),
 
-                                  glinty::divider("or"),
+                              glinty::divider("or"),
 
-                                  glinty::file_input(
-                            "audio_file", "",
-                            accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac",
-                                       ".webm")
-                        ),
-
-                                  glinty::checkbox_input("stream_mode",
-                                                         "Live transcription", FALSE),
-
-                                  glinty::audio_output("audio_preview"),
-
-                                  glinty::text_input(
-                            "prompt", "Prompt (optional)",
-                            placeholder = "Names, acronyms, or terms"
-                        ),
-
-                                  glinty::button("transcribe", "Transcribe",
-                                                 variant = "primary")
+                              glinty::file_input(
+                        "audio_file", "",
+                        accept = c(".wav", ".mp3", ".m4a", ".ogg", ".flac",
+                                   ".webm")
                     ),
 
-                    glinty::column(
-                                   grow = 3L, gap = 12L,
+                              glinty::checkbox_input("stream_mode",
+                        "Live transcription", FALSE),
 
-                                   glinty::conditional_panel(
-                            condition = glinty::input_is("stream_mode", TRUE),
-                            glinty::panel(
-                                          variant = "card", title = "Live",
-                                          glinty::text_output("live_text")
-                            )
-                        ),
+                              glinty::audio_output("audio_preview"),
 
-                                   glinty::tabset(
-                            glinty::tab_panel(
-                                "Text",
-                                glinty::verbatim_output("transcription")
-                            ),
-                            glinty::tab_panel("Segments",
-                                              glinty::table_output("segments")),
-                            glinty::tab_panel("Raw",
-                                              glinty::verbatim_output("raw")),
-                            id = "results_tabs"
-                        )
-                    )
+                              glinty::text_input(
+                        "prompt", "Prompt (optional)",
+                        placeholder = "Names, acronyms, or terms"
+                    ),
+
+                              glinty::button("transcribe", "Transcribe",
+                        variant = "primary")
                 ),
+
+                glinty::column(
+                               grow = 3L, gap = 12L,
+
+                               glinty::conditional_panel(
+                        condition = glinty::input_is("stream_mode", TRUE),
+                        glinty::panel(
+                                      variant = "card", title = "Live",
+                                      glinty::text_output("live_text")
+                        )
+                    ),
+
+                               glinty::tabset(
+                        glinty::tab_panel(
+                            "Text",
+                            glinty::verbatim_output("transcription")
+                        ),
+                        glinty::tab_panel("Segments",
+                            glinty::table_output("segments")),
+                        glinty::tab_panel("Raw",
+                            glinty::verbatim_output("raw")),
+                        id = "results_tabs"
+                    )
+                )
+            ),
 
                              # Right: settings. Fixed width, like the left.
                              glinty::panel(
-                    variant = "sidebar", width = 280L, id = "right-sidebar",
-                    glinty::heading("Settings", level = 3L),
+                variant = "sidebar", width = 280L, id = "right-sidebar",
+                glinty::heading("Settings", level = 3L),
 
-                    glinty::select_input(
-                        "backend", "Backend",
-                        choices = c("OpenAI API" = "openai"),
-                        selected = "openai"
+                glinty::select_input(
+                                     "backend", "Backend",
+                                     choices = c("OpenAI API" = "openai"),
+                                     selected = "openai"
+                ),
+
+                glinty::ui_output("model_select"),
+
+                glinty::conditional_panel(
+                    condition = glinty::input_is("backend", "whisper"),
+                    glinty::ui_output("download_model_ui")
+                ),
+
+                glinty::select_input(
+                                     "language", "Language",
+                                     choices = c(
+                        "English" = "en",
+                        "Auto-detect" = "",
+                        "Spanish" = "es",
+                        "French" = "fr",
+                        "German" = "de",
+                        "Italian" = "it",
+                        "Portuguese" = "pt",
+                        "Japanese" = "ja",
+                        "Chinese" = "zh"
                     ),
+                                     selected = "en"
+                ),
 
-                    glinty::ui_output("model_select"),
+                # Both api-routed backends need an address; only one
+                # of them needs a key.
+                glinty::conditional_panel(
+                    condition = glinty::input_is("backend",
+                        c("openai", "whisper-api")),
+                    glinty::text_input(
+                                       "api_base", "API URL",
+                                       value = default_api_base()
+                    )
+                ),
 
-                    glinty::conditional_panel(
-                        condition = glinty::input_is("backend", "whisper"),
-                        glinty::ui_output("download_model_ui")
-                    ),
+                glinty::conditional_panel(
+                    condition = glinty::input_is("backend", "openai"),
+                    # Deliberately NOT prefilled from OPENAI_API_KEY. A
+                    # value= attribute is rendered into the page source
+                    # in plaintext, where type="password" hides nothing,
+                    # and glinty serves on all interfaces. The server
+                    # already picks the environment key up in
+                    # configure_backend(); this field is only for
+                    # overriding it.
+                    glinty::password_input(
+                        "api_key", "API Key",
+                        placeholder = key_placeholder()
+                    )
+                ),
 
-                    glinty::select_input(
-                        "language", "Language",
-                        choices = c(
-                            "English" = "en",
-                            "Auto-detect" = "",
-                            "Spanish" = "es",
-                            "French" = "fr",
-                            "German" = "de",
-                            "Italian" = "it",
-                            "Portuguese" = "pt",
-                            "Japanese" = "ja",
-                            "Chinese" = "zh"
-                        ),
-                        selected = "en"
-                    ),
-
-                    glinty::conditional_panel(
-                        condition = glinty::input_is("backend", "openai"),
-                        glinty::text_input(
-                            "api_base", "API URL",
-                            value = "https://api.openai.com"
-                        ),
-                        # Deliberately NOT prefilled from OPENAI_API_KEY. A
-                        # value= attribute is rendered into the page source
-                        # in plaintext, where type="password" hides nothing,
-                        # and glinty serves on all interfaces. The server
-                        # already picks the environment key up in
-                        # configure_backend(); this field is only for
-                        # overriding it.
-                        glinty::password_input(
-                            "api_key", "API Key",
-                            placeholder = key_placeholder()
-                        )
-                    ),
-
-                    glinty::text_output("status", variant = "muted")
-                )
+                glinty::text_output("status", variant = "muted")
+            )
         )
     )
 }

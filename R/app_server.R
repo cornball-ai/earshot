@@ -48,8 +48,17 @@ app_server <- function(input, output, session) {
         opt_str(input$backend()) %||% default_backend
     }
     current_model <- function() {
-        opt_str(input$model()) %||%
-        get_models_for_backend(current_backend())$default
+        held <- opt_str(input$model())
+        choices <- get_models_for_backend(current_backend())
+        # Not just NULL: a model belonging to the *previous* backend is
+        # no better. render_ui() rebuilds this select when the backend
+        # changes, and v3 deliberately does not echo the new tree's
+        # values back, so the server keeps holding "tiny" after a switch
+        # to a backend whose only model is "whisper-1".
+        if (is.null(held) || !held %in% choices$choices) {
+            return(choices$default)
+        }
+        held
     }
 
     # Dynamic model selection based on backend (refreshes after download)
@@ -75,6 +84,13 @@ app_server <- function(input, output, session) {
     output$download_model_ui <- glinty::render_ui(function() {
         model_refresh() # Dependency to refresh after downloads
 
+        # Only the in-process backend has weights to fetch. Offering a
+        # download to someone using a remote engine or the OpenAI API
+        # would pull gigabytes this machine will never load.
+        if (!identical(current_backend(), "whisper")) {
+            return(NULL)
+        }
+
         all_models <- c("tiny", "base", "small", "medium", "large-v3")
         if (requireNamespace("whisper", quietly = TRUE)) {
             downloaded <- whisper::list_downloaded_models()
@@ -91,15 +107,22 @@ app_server <- function(input, output, session) {
                            glinty::select_input("download_model", "Download Model",
                     choices = available, selected = available[1]),
                            glinty::button("download_btn", "Download Weights",
-                                          icon = "download")
+                    icon = "download")
             )
         }
     })
 
     # Update backend configuration when changed
     glinty::observe_event(input$backend, function() {
-        configure_backend(input$backend(), session)
+        configure_backend(input$backend(), session, opt_str(input$api_base()))
         status_msg(paste0("Backend: ", input$backend()))
+    })
+
+    # And when the address changes under a backend that uses one. Typing
+    # a URL into a field the server never reads is the same dead control
+    # as a button that reports nothing.
+    glinty::observe_event(input$api_base, function() {
+        configure_backend(current_backend(), session, opt_str(input$api_base()))
     })
 
     # Keep the recorder's copy of the streaming flag in step
@@ -277,11 +300,14 @@ app_server <- function(input, output, session) {
 
         # Transcribe chunk
         tryCatch({
+            route <- stt_route(current_backend())
             res <- stt.api::stt(
                                 file = wav_file,
                                 model = current_model(),
                                 language = opt_str(input$language()),
-                                response_format = "verbose_json"
+                                response_format = "verbose_json",
+                                backend = route$backend,
+                                source = route$source
             )
 
             # Add to accumulated chunks
@@ -407,12 +433,19 @@ app_server <- function(input, output, session) {
             glinty::inc_progress(0.2, detail = "Running transcription")
 
             tryCatch({
+                # Which engine and where it runs, said outright. Left to
+                # stt.api's "auto" this went in process whenever the
+                # whisper package was installed, whatever the user had
+                # selected and whatever base was configured.
+                route <- stt_route(backend)
                 res <- stt.api::stt(
                                     file = audio_path,
                                     model = model,
                                     language = language,
                                     prompt = prompt,
-                                    response_format = "verbose_json"
+                                    response_format = "verbose_json",
+                                    backend = route$backend,
+                                    source = route$source
                 )
 
                 glinty::inc_progress(0.6, detail = "Done")
@@ -537,10 +570,10 @@ app_server <- function(input, output, session) {
             # there is no file.
             icon_el <- if (has_audio) {
                 glinty::icon(if (identical(entry$source_type, "upload")) {
-                                 "upload"
-                             } else {
-                                 "microphone"
-                             })
+                        "upload"
+                    } else {
+                        "microphone"
+                    })
             } else {
                 NULL
             }
@@ -556,16 +589,15 @@ app_server <- function(input, output, session) {
                                       gap = 8L, align = "center",
                                       icon_el,
                                       glinty::button(
-                            "history_view",
-                            paste("View", format_timestamp(entry$timestamp)),
-                            variant = "ghost", value = entry$id
-                        ),
-                                      glinty::button("history_delete", "Delete",
-                                                     variant = "ghost", icon = "trash",
-                                                     value = entry$id)
+                        "history_view",
+                        paste("View", format_timestamp(entry$timestamp)),
+                        variant = "ghost", value = entry$id
                     ),
-                          glinty::txt(truncate_text(entry$text, 80),
-                                      variant = "muted")
+                                      glinty::button("history_delete", "Delete",
+                        variant = "ghost", icon = "trash",
+                        value = entry$id)
+                ),
+                          glinty::txt(truncate_text(entry$text, 80), variant = "muted")
             )
         })
 
@@ -694,14 +726,20 @@ ensure_wav <- function(path, status_fn = message) {
 detect_backends <- function() {
     backends <- c()
 
-    # Check for native whisper
-    if (requireNamespace("whisper", quietly = TRUE)) {
-        backends <- c(backends, "whisper (native)" = "whisper")
+    # A whisper serve() somewhere else on the network -- a GPU box, most
+    # likely. First in the list, so it is the default: a remote GPU
+    # beats in-process CPU inference, and the address is only set when
+    # someone has actually stood one up.
+    if (nzchar(whisper_base())) {
+        backends <- c(backends, "whisper (remote)" = "whisper-api")
     }
 
-    # Check for audio.whisper
-    if (requireNamespace("audio.whisper", quietly = TRUE)) {
-        backends <- c(backends, "audio.whisper (local)" = "audio.whisper")
+    # Native whisper, in process. requireNamespace() is not enough: the
+    # package installs fine while its torch backend does not, and then
+    # every transcription dies on "Lantern is not loaded" -- from a
+    # backend this list had offered and made the default.
+    if (whisper_local_works()) {
+        backends <- c(backends, "whisper (native)" = "whisper")
     }
 
     # Check for OpenAI API key
@@ -717,19 +755,106 @@ detect_backends <- function() {
     backends
 }
 
+#' The address of a remote whisper serve(), or ""
+#'
+#' From the environment rather than a constant: the host is site
+#' configuration, not something to bake into a package. `whisper::serve()`
+#' listens on 7809 by default, so this is usually
+#' `EARSHOT_WHISPER_BASE=http://somehost:7809`.
+#'
+#' @return character URL, or "" when none is configured
+#'
+#' @keywords internal
+whisper_base <- function() {
+    trimws(Sys.getenv("EARSHOT_WHISPER_BASE", ""))
+}
+
+#' Can whisper actually run in this process?
+#'
+#' The package being installed says nothing about whether its torch
+#' backend is: torch ships lantern separately, and without it every
+#' call fails at transcription time. Checked here so a backend that
+#' cannot work is never offered, rather than being offered, defaulted
+#' to, and failing on the first press.
+#'
+#' @return TRUE when whisper is installed and torch is ready
+#'
+#' @keywords internal
+whisper_local_works <- function() {
+    if (!requireNamespace("whisper", quietly = TRUE)) {
+        return(FALSE)
+    }
+    # Silenced, not just guarded. Asking torch whether it is ready is
+    # enough to make a half-installed one complain at length on stderr,
+    # and "we checked and the answer was no" is not news worth printing
+    # on every startup.
+    ok <- suppressWarnings(suppressMessages(tryCatch(
+                utils::capture.output(res <- torch::torch_is_installed(),
+                                      type = "message"),
+                error = function(e) NULL
+            )))
+    if (!exists("res", inherits = FALSE)) {
+        return(FALSE)
+    }
+    isTRUE(res)
+}
+
+#' How an earshot backend maps onto stt.api's two axes
+#'
+#' stt.api asks *which engine* and *where it runs* separately, and
+#' defaults both to "auto". Its auto rule is
+#' `if (.has_whisper()) route <- "package"` -- local whisper wins
+#' whenever the package is installed, and set_stt_base() is never
+#' consulted. earshot passed neither argument, so every transcription
+#' went in process no matter which backend was selected.
+#'
+#' @param backend character earshot backend value
+#' @return list(backend, source) for [stt.api::stt]
+#'
+#' @keywords internal
+stt_route <- function(backend) {
+    switch(backend,
+           openai = list(backend = "openai", source = "api"),
+           "whisper-api" = list(backend = "whisper", source = "api"),
+           whisper = list(backend = "whisper", source = "package"),
+           # Unknown: let stt.api decide rather than assert something
+           # wrong about a backend this function has not been taught.
+           list(backend = "auto", source = "auto")
+    )
+}
+
 # Configure backend settings
-configure_backend <- function(backend, session = NULL) {
+configure_backend <- function(backend, session = NULL, base = NULL) {
+    base <- opt_str(base)
     if (backend == "openai") {
-        stt.api::set_stt_base("https://api.openai.com")
+        # What the user typed wins. The field defaults to OpenAI's own
+        # host, so honouring it costs nothing in the common case and is
+        # the only way to reach an OpenAI-compatible endpoint elsewhere
+        # -- which the field exists to allow and this used to ignore.
+        stt.api::set_stt_base(base %||% "https://api.openai.com")
         key <- Sys.getenv("OPENAI_API_KEY", "")
         if (nzchar(key)) {
             stt.api::set_stt_key(key)
         }
-    } else if (backend == "audio.whisper") {
-        # Clear API settings to force local backend
-        options(stt.api_base = NULL, stt.api_key = NULL)
+    } else if (backend == "whisper-api") {
+        # A whisper serve() elsewhere. No key: it is ours, on our
+        # network, and it does not ask for one.
+        stt.api::set_stt_base(base %||% whisper_base())
+        options(stt.api_key = NULL)
+        # stt.api's default total is 60s, which is a fine ceiling for a
+        # short clip and not for an hour of tape. Transcription is not
+        # a quick API call, and a request cut off at the minute mark
+        # looks to the user like the server failed.
+        #
+        # Only the total is ours to set. stt.api passes `timeout` to
+        # curl and leaves `connecttimeout` at R curl's default of 10s,
+        # so a slow *connect* -- a cold Tailscale path negotiating NAT
+        # traversal, say -- fails at ten seconds no matter what this
+        # says. Reach the service over the LAN where you can.
+        options(stt.timeout = getOption("earshot.stt_timeout", 900))
     } else if (backend == "whisper") {
-        # Native whisper - no API settings needed
+        # In process. No API settings, and stt_route() sends it to the
+        # package explicitly so a stale base cannot pull it back out.
         options(stt.api_base = NULL, stt.api_key = NULL)
     }
 }
@@ -738,6 +863,16 @@ configure_backend <- function(backend, session = NULL) {
 get_models_for_backend <- function(backend) {
     if (backend == "openai") {
         list(choices = c("whisper-1" = "whisper-1"), default = "whisper-1")
+    } else if (backend == "whisper-api") {
+        # A remote serve() loads one model at startup and transcribes
+        # with that; the name travels for the record rather than to
+        # choose anything, so this offers the sizes whisper knows and
+        # lets the server ignore what it cannot honour.
+        list(
+             choices = c("small" = "small", "tiny" = "tiny", "base" = "base",
+                         "medium" = "medium", "large-v3" = "large-v3"),
+             default = "small"
+        )
     } else if (backend == "audio.whisper") {
         list(
              choices = c("tiny" = "tiny", "base" = "base", "small" = "small",

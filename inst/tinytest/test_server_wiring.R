@@ -157,3 +157,116 @@ targets <- regmatches(css, gregexpr('\\[data-g-target="[^"]*"\\]', css))[[1]]
 for (t in unique(targets)) {
     expect_true(grepl(t, served, fixed = TRUE))
 }
+
+# --- which engine, and where it runs, said outright ---
+#
+# stt.api asks those separately and defaults both to "auto", and its
+# auto rule is `if (.has_whisper()) route <- "package"`: local whisper
+# wins whenever the package is installed, and set_stt_base() is never
+# consulted. earshot passed neither argument, so every transcription
+# went in process no matter which backend was selected -- which on a
+# machine whose torch is half-installed means every press failed on
+# "Lantern is not loaded", including the OpenAI one.
+stt_route <- earshot:::stt_route
+expect_equal(stt_route("openai"), list(backend = "openai", source = "api"))
+expect_equal(stt_route("whisper-api"), list(backend = "whisper", source = "api"))
+expect_equal(stt_route("whisper"),
+             list(backend = "whisper", source = "package"))
+# A backend this has not been taught is stt.api's call, not a guess
+expect_equal(stt_route("something-new"),
+             list(backend = "auto", source = "auto"))
+
+# every backend the app offers has a route
+whisper_base <- earshot:::whisper_base
+
+# Set it, check, restore. A helper for this was more machinery than
+# two blocks of test need.
+Sys.setenv(EARSHOT_WHISPER_BASE = "http://example.test:7809")
+expect_equal(whisper_base(), "http://example.test:7809")
+offered <- detect_backends()
+expect_true("whisper-api" %in% offered)
+# first, so it is the default: a remote GPU beats in-process CPU
+expect_equal(unname(offered[1]), "whisper-api")
+for (b in offered) {
+  expect_false(identical(stt_route(b)$backend, "auto"))
+}
+
+Sys.unsetenv("EARSHOT_WHISPER_BASE")
+expect_equal(whisper_base(), "")
+expect_false("whisper-api" %in% detect_backends())
+
+# --- a backend that cannot run is not offered ---
+# requireNamespace() says the package is installed; it says nothing
+# about whether torch is ready. Offering it anyway made a broken
+# backend the default.
+expect_true(is.logical(earshot:::whisper_local_works()))
+expect_equal(length(earshot:::whisper_local_works()), 1L)
+
+# The invariant that matters: a backend in the list can be run. Held
+# only as "does it have a route" this passed while the list offered an
+# in-process whisper whose torch could not start -- and offered it
+# first, so it was the default, so the first press of Transcribe died.
+if ("whisper" %in% detect_backends()) {
+  expect_true(earshot:::whisper_local_works())
+}
+if ("whisper-api" %in% detect_backends()) {
+  expect_true(nzchar(earshot:::whisper_base()))
+}
+if ("openai" %in% detect_backends()) {
+  # either an environment key, or the fallback that lets one be typed
+  expect_true(nzchar(Sys.getenv("OPENAI_API_KEY", "")) ||
+              identical(unname(detect_backends()), "openai"))
+}
+
+configure_backend <- earshot:::configure_backend
+old_base <- getOption("stt.api_base")
+
+# What the user typed wins. The field defaults to OpenAI's host, so
+# honouring it costs nothing in the common case and is the only way to
+# reach an OpenAI-compatible endpoint elsewhere -- which the field
+# exists to allow and which this used to hardcode past.
+configure_backend("openai", base = "http://compatible.test:1234")
+expect_equal(getOption("stt.api_base"), "http://compatible.test:1234")
+
+Sys.setenv(EARSHOT_WHISPER_BASE = "http://example.test:7809")
+configure_backend("whisper-api")
+expect_equal(getOption("stt.api_base"), "http://example.test:7809")
+Sys.unsetenv("EARSHOT_WHISPER_BASE")
+
+# Transcription is not a quick API call. stt.api caps the total at 60s
+# by default, which cuts a long recording off and looks to the user
+# like the server failed.
+old_timeout <- getOption("stt.timeout")
+Sys.setenv(EARSHOT_WHISPER_BASE = "http://example.test:7809")
+configure_backend("whisper-api")
+expect_true(getOption("stt.timeout") > 60)
+# and it stays overridable, for whoever knows their own tape better
+options(earshot.stt_timeout = 123)
+configure_backend("whisper-api")
+expect_equal(getOption("stt.timeout"), 123)
+options(earshot.stt_timeout = NULL, stt.timeout = old_timeout)
+Sys.unsetenv("EARSHOT_WHISPER_BASE")
+
+configure_backend("whisper")
+expect_null(getOption("stt.api_base"))
+options(stt.api_base = old_base)
+
+# --- a model belonging to the previous backend is not used ---
+# render_ui() rebuilds the model select when the backend changes, and
+# v3 deliberately does not echo the new tree's values back, so the
+# server goes on holding "tiny" after a switch to a backend whose only
+# model is "whisper-1".
+s4 <- new_session("t4")
+with_session(s4, app_server(s4$input, s4$output, s4))
+glinty::flush_reactions()
+dispatch(s4, '{"type":"input","id":"backend","value":"whisper"}')
+dispatch(s4, '{"type":"input","id":"model","value":"tiny"}')
+glinty::flush_reactions()
+dispatch(s4, '{"type":"input","id":"backend","value":"openai"}')
+glinty::flush_reactions()
+expect_equal(glinty::isolate(s4$input$model()), "tiny",
+             info = "the stale value really is still there")
+# and the app does not use it
+models <- get_models_for_backend("openai")
+expect_false("tiny" %in% models$choices)
+session_end(s4)
