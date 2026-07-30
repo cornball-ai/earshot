@@ -56,23 +56,37 @@ body {
   line-height: 1.7;
 }
 
-/* Primary button (glinty's g-btn) */
+/* Buttons.
+ *
+ * Shared shape only. The gradient belongs to the primary variant, and
+ * putting it here instead made every button in the app shout: glinty
+ * emits `g-btn g-btn-<variant>` and defines a quiet
+ * `.g-btn-ghost { background: transparent }`, but this stylesheet loads
+ * after glinty's, so at equal specificity a rule on the base class wins
+ * and the ghost variant was overruled everywhere it was asked for --
+ * which is why the history rows came out as rows of purple pills.
+ */
 .g-btn {
-  background: var(--gradient-primary);
   border: none;
-  color: #fff;
   font-family: inherit;
   font-size: 0.95rem;
-  font-weight: 600;
   letter-spacing: 0.02em;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
   border-radius: 8px;
+}
+
+.g-btn-primary,
+.g-btn-default {
+  background: var(--gradient-primary);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
   padding: 0.5rem 1.25rem;
 }
 
-.g-btn:hover, .g-btn:focus {
+.g-btn-primary:hover, .g-btn-primary:focus,
+.g-btn-default:hover, .g-btn-default:focus {
   background: var(--gradient-hover);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
@@ -80,6 +94,31 @@ body {
 
 .g-btn:active {
   transform: translateY(0);
+}
+
+/* Quiet: for controls that sit in a list rather than asking to be
+   pressed. Text weight, no fill, no shadow, and small enough that a
+   row of them reads as a row of entries rather than a row of buttons. */
+.g-btn-ghost {
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 0.8rem;
+  padding: 0.15rem 0.35rem;
+}
+
+.g-btn-ghost:hover, .g-btn-ghost:focus {
+  background: transparent;
+  color: var(--primary);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Deleting is the one that should look like it means it, but only
+   once the pointer is on it. */
+[data-g-target="history_delete"]:hover {
+  color: var(--accent);
 }
 
 /* The transcribe button spans its card.

@@ -270,3 +270,16 @@ expect_equal(glinty::isolate(s4$input$model()), "tiny",
 models <- get_models_for_backend("openai")
 expect_false("tiny" %in% models$choices)
 session_end(s4)
+
+# --- no app rule cancels a glinty variant ---
+#
+# glinty emits `g-btn g-btn-<variant>` and this stylesheet loads after
+# glinty's, so a rule on the base class wins at equal specificity and
+# cancels every variant. Nothing fails when it happens: the app just
+# has one kind of button, which reads as a design choice. It is how the
+# history rows shipped as a column of gradient pills while asking for
+# `ghost`.
+expect_equal(
+  glinty::css_variant_conflicts(
+    system.file("app/www/styles.css", package = "earshot")),
+  character(0))
